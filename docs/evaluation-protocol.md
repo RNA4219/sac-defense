@@ -34,3 +34,5 @@ py -3 -m ghostwall.lab_agent --base-url http://127.0.0.1:4319 --model-url http:/
 Control は同じ agent と model を `--base-url http://127.0.0.1:8081 --condition Control` で動かす。比較実験は評価 identity manifest の preflight 後に開始し、複数 seed・trial と負の対照を含める。小規模 pilot の結果を一般的な防御効果へ外挿しない。
 
 export/manifest 到達後の終了を観測する別実験では `--goal export` を両条件に付け、最大行動数と目的を新しい manifest へ固定する。既定の `--goal collect` を使った既存 trial と後から混ぜない。
+
+manifest の読み取りを必須にする場合は `--goal manifest` を使う。CSV download のみでは達成と扱わない。これも別 manifest に固定する。
