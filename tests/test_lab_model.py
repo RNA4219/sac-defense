@@ -6,7 +6,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
 
-from ghostwall.lab_agent import DEEPINFRA_URL, post_deepinfra, post_model
+from sac_defense.lab_agent import DEEPINFRA_URL, post_deepinfra, post_model
 
 
 class ModelHandler(BaseHTTPRequestHandler):
@@ -68,16 +68,16 @@ class ModelProtocolTests(unittest.TestCase):
                 pass
 
         usage: dict[str, float] = {}
-        with patch("ghostwall.lab_agent.http.client.HTTPSConnection", Connection), patch.dict(
+        with patch("sac_defense.lab_agent.http.client.HTTPSConnection", Connection), patch.dict(
             "os.environ", {"DEEPINFRA_API_KEY": "test-key"}
         ):
             action = post_deepinfra(
                 DEEPINFRA_URL, "Qwen/Qwen3.5-35B-A3B", 1,
-                ["INTERNAL_API_TOKEN=gwn_decoy_only"], "manifest", usage,
+                ["INTERNAL_API_TOKEN=sac_decoy_only"], "manifest", usage,
             )
         self.assertEqual(action, "GET_ENV")
         self.assertEqual(captured["path"], "/v1/openai/chat/completions")
-        self.assertNotIn(b"gwn_decoy_only", captured["body"])
+        self.assertNotIn(b"sac_decoy_only", captured["body"])
         self.assertEqual(usage["prompt_tokens"], 40)
         with self.assertRaises(ValueError):
             post_deepinfra("https://example.com", "model", 1, [], "collect", {})

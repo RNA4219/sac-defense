@@ -9,9 +9,9 @@ from contextlib import closing, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from ghostwall.cli import main
-from ghostwall.core import load_key, new_session
-from ghostwall.store import Store
+from sac_defense.cli import main
+from sac_defense.core import load_key, new_session
+from sac_defense.store import Store
 
 
 class FakeServer:
@@ -78,10 +78,11 @@ class CliTests(unittest.TestCase):
         status, output, _ = self.run_cli("prune", *common, "--days", "30")
         self.assertEqual(status, 0)
         self.assertEqual(json.loads(output)["removed"]["host_signals"], 1)
-        with patch("ghostwall.cli.Server", FakeServer):
+        with patch("sac_defense.cli.Server", FakeServer):
             status, output, _ = self.run_cli(
                 "serve", "--mode", "router", *common, "--kill-switch", str(self.kill_switch),
                 "--decoy", "http://127.0.0.1:4320", "--upstream", "http://127.0.0.1:8080",
+                "--allow-real-prefix", "/home",
             )
         self.assertEqual(status, 0)
         self.assertIn('"listening"', output)

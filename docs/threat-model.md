@@ -10,7 +10,7 @@
 
 ## 主要な失敗
 
-1. decoy へ触れた後も real 側を再探索する。署名済み sticky session と `--never-real-prefix` で指定した機密経路の上流到達禁止、独立した real 側の防御を使い、lab で再探索率を測る。
+1. decoy へ触れた後も real 側を再探索する。署名済み sticky session、`--never-real-prefix` で指定した機密経路の上流到達禁止、`--allow-real-prefix` による real 経路の明示、独立した real 側の防御を使い、lab で再探索率を測る。
 2. decoy の顧客・注文・件数に矛盾が出る。データ生成はコードと SQLite に固定し、外部キーと CSV hash を試験する。
 3. decoy 停止時に real 側へ流れる。router は 503/403 へ閉じる。
 4. decoy を踏み台にする。ネットワーク、volume、権限を分離し、Internet egress を閉じる。
@@ -18,4 +18,4 @@
 
 ## 信頼の限界
 
-署名 cookie は同一 client 内の sticky route 用であり、攻撃者個人の識別ではない。[EV-20261016-07](evidence/EV-20261016-07-result.md) で cookie と token の削除により新 session から実ゴールへ到達した。`--never-real-prefix` は指定経路を cookie に依存せずデコイへ送るが、指定漏れした経路は保護しない。また正規の認証済みリクエストも同じ経路ではデコイへ行く。導入先では機密経路の台帳と実アプリの認証・WAF/IPS・host policy を独立して維持する。host event は信頼された外部相関器が session cookie と対応付けた場合だけ取り込める。eBPF event 単体から HTTP session ID を確実に特定できるとは主張しない。
+署名 cookie は同一 client 内の sticky route 用であり、攻撃者個人の識別ではない。[EV-20261016-07](evidence/EV-20261016-07-result.md) で cookie と token の削除により新 session から実ゴールへ到達した。現行版では未登録経路を block し、`--never-real-prefix` は指定経路を cookie に依存せずデコイへ送る。正規の認証済みリクエストも機密経路ではデコイへ行くため、許可経路と保護経路の台帳が必要。導入先では実アプリの認証・WAF/IPS・host policy を独立して維持する。host event は信頼された外部相関器が session cookie と対応付けた場合だけ取り込める。eBPF event 単体から HTTP session ID を確実に特定できるとは主張しない。

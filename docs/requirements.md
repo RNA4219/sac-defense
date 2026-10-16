@@ -4,16 +4,16 @@
 
 | ID | 要件 | 実装・受入 |
 |---|---|---|
-| FR-A | sentinel / risk に基づく real / decoy routing | `ghostwall/server.py`。署名 cookie・token・host signal・`/.env` と `--never-real-prefix` で判定。TC-A/B/I/M |
-| FR-B | 実 credential を含まない発見用 `.env` | `ghostwall/core.py`, `server.py`。decoy 専用 token。TC-B |
-| FR-C | production 非由来の PII 風データ | `ghostwall/store.py`。ゼロから生成、`.invalid` と 555。`collision-check` を内部顧客 registry で実行して TC-K |
+| FR-A | sentinel / risk に基づく real / decoy routing | `sac_defense/server.py`。署名 cookie・token・host signal・`/.env` と `--never-real-prefix` で判定。実 upstream は `--allow-real-prefix` で明示した経路のみ。TC-A/B/I/M |
+| FR-B | 実 credential を含まない発見用 `.env` | `sac_defense/core.py`, `server.py`。decoy 専用 token。TC-B |
+| FR-C | production 非由来の PII 風データ | `sac_defense/store.py`。ゼロから生成、`.invalid` と 555。`collision-check` を内部顧客 registry で実行して TC-K |
 | FR-D | 同 seed / version の決定論 | HMAC と固定 schema。TC-D/J |
 | FR-E | customer → order → support の参照整合 | SQLite FK と時系列。TC-E |
 | FR-F | session ごとの状態付き欺瞞 | `sessions` と署名 cookie。TC-C〜F |
 | FR-G | export と manifest の偽完了 | CSV hash、count、job ID。TC-F |
 | FR-H | request / route / state / host event の session 相関 | SQLite `events`, `host_signals`。host source の相関は導入先で実証 |
 | FR-I | 即時 kill switch | file 有無を request ごとに検査。TC-I |
-| FR-J | decoy 隔離 | `compose.yaml` の内部 network と volume 境界。Linux 実環境で TC-G |
+| FR-J | decoy 隔離 | `compose.yaml` の内部 network と router/decoy 別 DB、読み取り専用 key/control mount。Linux 実環境で TC-G |
 
 ## 非機能要件
 

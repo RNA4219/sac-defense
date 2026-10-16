@@ -25,6 +25,8 @@ STAGES = (
 )
 GIVEN = ("Airi", "Haru", "Mio", "Ren", "Sora", "Yuna", "Kai", "Nagi")
 FAMILY = ("Akamine", "Hoshina", "Kisaragi", "Mizuno", "Naruse", "Shiomi", "Takase", "Yukishiro")
+MAX_DB_PAGES = 16_384
+MAX_EVENTS = 10_000
 
 
 def utc_now() -> str:
@@ -43,6 +45,7 @@ class Store:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")
         conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute(f"PRAGMA max_page_count={MAX_DB_PAGES}")
         try:
             with conn:
                 yield conn
@@ -101,6 +104,13 @@ class Store:
                 db.execute("INSERT INTO meta VALUES ('dataset_version', ?)", (DATASET_VERSION,))
                 db.execute("INSERT INTO meta VALUES ('created_at', '2025-01-01T00:00:00Z')")
                 self._populate(db)
+            path_format = db.execute("SELECT value FROM meta WHERE key='event_path_format'").fetchone()
+            if not path_format:
+                for row in db.execute("SELECT id,path FROM events").fetchall():
+                    db.execute("UPDATE events SET path=? WHERE id=?", (self._path_digest(row["path"]), row["id"]))
+                db.execute("INSERT INTO meta VALUES ('event_path_format', 'hmac-24')")
+            elif path_format[0] != "hmac-24":
+                raise ValueError("unknown event path format")
             errors = db.execute("PRAGMA foreign_key_check").fetchall()
             if errors:
                 raise ValueError("synthetic database has broken foreign keys")
@@ -180,12 +190,20 @@ class Store:
             return current
 
     def event(self, sid: str, kind: str, route: str, stage: str, path: str, count: int = 0) -> None:
-        # Never store request bodies, query strings, credentials, IPs, or headers.
+        # Path is keyed so attacker-supplied URL segments cannot persist as plaintext.
         with self.connect() as db:
-            db.execute(
+            cursor = db.execute(
                 "INSERT INTO events(at,sid,kind,route,stage,path,synthetic_count) VALUES (?,?,?,?,?,?,?)",
-                (utc_now(), sid, kind, route, stage, path[:120], count),
+                (utc_now(), sid, kind, route, stage, self._path_digest(path), count),
             )
+            if cursor.lastrowid % 256 == 0:
+                db.execute(
+                    "DELETE FROM events WHERE id < (SELECT id FROM events ORDER BY id DESC LIMIT 1 OFFSET ?)",
+                    (MAX_EVENTS - 1,),
+                )
+
+    def _path_digest(self, path: str) -> str:
+        return hmac.new(self.key, f"event-path:v1:{path}".encode(), hashlib.sha256).hexdigest()[:24]
 
     def host_signal(self, sid: str, kind: str, severity: int) -> None:
         if not 0 <= severity <= 10 or kind not in {"decoy_file_access", "suspicious_process", "network_probe"}:

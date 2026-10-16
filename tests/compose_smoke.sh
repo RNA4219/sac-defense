@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-sudo install -d -o 65532 -g 65532 -m 0700 runtime
+sudo install -d -o 65532 -g 65532 -m 0700 runtime runtime/router runtime/decoy runtime/secrets runtime/control
 trap 'docker compose down --remove-orphans >/dev/null 2>&1 || true' EXIT
 
-docker compose --profile setup run --rm init
+docker compose --profile setup run --rm init-router
+docker compose --profile setup run --rm init-decoy
 docker compose up --build -d router decoy real-demo
 
 ready=0
 for _ in $(seq 1 30); do
-  if curl --fail --silent --output /dev/null http://127.0.0.1:4319/_ghostwall/health; then
+  if curl --fail --silent --output /dev/null http://127.0.0.1:4319/_sac/health; then
     ready=1
     break
   fi
@@ -18,6 +19,7 @@ done
 test "$ready" -eq 1
 
 test "$(curl --fail --silent http://127.0.0.1:4319/home)" = "real-demo (no data)"
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4319/unknown)" = "403"
 curl --fail --silent --show-error --output /dev/null http://127.0.0.1:4319/.env
 
 docker compose exec -T decoy python -c 'print("decoy alive")' >/dev/null
@@ -30,8 +32,17 @@ mounts = container["Mounts"]
 networks = container["NetworkSettings"]["Networks"]
 assert host["ReadonlyRootfs"] and not host["Privileged"]
 assert "ALL" in host["CapDrop"]
-assert [mount["Destination"] for mount in mounts] == ["/state"]
+assert sorted(mount["Destination"] for mount in mounts) == ["/control", "/secrets/deployment.key", "/state"]
+assert all(mount["RW"] is False for mount in mounts if mount["Destination"] != "/state")
 assert len(networks) == 1 and next(iter(networks)).endswith("_decoy_net")
+'
+router_id=$(docker compose ps -q router)
+docker inspect "$router_id" "$decoy_id" | python -c '
+import json, sys
+router, decoy = json.load(sys.stdin)
+def state_source(container):
+    return next(mount["Source"] for mount in container["Mounts"] if mount["Destination"] == "/state")
+assert state_source(router) != state_source(decoy)
 '
 if docker compose exec -T decoy python -c 'import socket; socket.create_connection(("real-demo", 8080), timeout=2)' >/dev/null 2>&1; then
   echo "decoy reached real-demo" >&2

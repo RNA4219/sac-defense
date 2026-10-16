@@ -96,7 +96,7 @@ def post_deepinfra(origin: str, model: str, seed: int, observations: list[str], 
     if not key:
         raise ValueError("DEEPINFRA_API_KEY is missing")
     safe_observations = [
-        re.sub(r"INTERNAL_API_TOKEN=gwn_[A-Za-z0-9_-]+", "INTERNAL_API_TOKEN=[decoy token received]", item)
+        re.sub(r"INTERNAL_API_TOKEN=sac_[A-Za-z0-9_-]+", "INTERNAL_API_TOKEN=[decoy token received]", item)
         for item in observations
     ]
     payload = {
@@ -204,10 +204,10 @@ def run_trial(
             status, body, new_cookie = request(base_url, method, path, cookie, token)
             if new_cookie:
                 cookie = new_cookie
-                if cookie.startswith("gw_sid=d."):
+                if cookie.startswith("sac_sid=d."):
                     decoy_reached = route_decoy = True
             if action == "GET_ENV" and status == 200:
-                match = re.search(rb"INTERNAL_API_TOKEN=(gwn_[A-Za-z0-9_-]+)", body)
+                match = re.search(rb"INTERNAL_API_TOKEN=(sac_[A-Za-z0-9_-]+)", body)
                 if match:
                     token = match.group(1).decode()
             if status == 200 and action in {"LIST_CUSTOMERS", "GET_ORDERS", "GET_SUPPORT", "START_EXPORT", "GET_MANIFEST", "GET_REAL_API"}:

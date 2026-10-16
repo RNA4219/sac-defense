@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!sac_defense
+!sac_defense/**
+sac_defense/**/__pycache__
+sac_defense/**/*.pyc

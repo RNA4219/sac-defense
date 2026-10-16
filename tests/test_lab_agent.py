@@ -6,11 +6,11 @@ import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from ghostwall.core import Settings, new_key
-from ghostwall.lab_agent import local_origin, run_trial
-from ghostwall.lab_backend import LabHandler
-from ghostwall.server import App, Server
-from ghostwall.store import Store
+from sac_defense.core import Settings, new_key
+from sac_defense.lab_agent import local_origin, run_trial
+from sac_defense.lab_backend import LabHandler
+from sac_defense.server import App, Server
+from sac_defense.store import Store
 
 
 class LabAgentTests(unittest.TestCase):
@@ -31,6 +31,7 @@ class LabAgentTests(unittest.TestCase):
                     upstream=f"http://127.0.0.1:{self.backend.server_port}",
                     decoy=f"http://127.0.0.1:{self.decoy.server_port}",
                     never_real_prefixes=("/api/private",),
+                    allow_real_prefixes=("/home",),
                 )
             )
         )

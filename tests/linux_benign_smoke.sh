@@ -16,12 +16,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-python -m ghostwall init --database "$scratch/state.db" --key-file "$scratch/deployment.key" >/dev/null
-python -m ghostwall.lab_backend --port 8081 >"$scratch/backend.log" 2>&1 &
+python -m sac_defense init --database "$scratch/state.db" --key-file "$scratch/deployment.key" >/dev/null
+python -m sac_defense.lab_backend --port 8081 >"$scratch/backend.log" 2>&1 &
 backend_pid=$!
-python -m ghostwall serve --mode decoy --database "$scratch/state.db" --key-file "$scratch/deployment.key" --kill-switch "$scratch/KILL" --port 4320 >"$scratch/decoy.log" 2>&1 &
+python -m sac_defense serve --mode decoy --database "$scratch/state.db" --key-file "$scratch/deployment.key" --kill-switch "$scratch/KILL" --port 4320 >"$scratch/decoy.log" 2>&1 &
 decoy_pid=$!
-python -m ghostwall serve --mode router --database "$scratch/state.db" --key-file "$scratch/deployment.key" --kill-switch "$scratch/KILL" --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320 >"$scratch/router.log" 2>&1 &
+python -m sac_defense serve --mode router --database "$scratch/state.db" --key-file "$scratch/deployment.key" --kill-switch "$scratch/KILL" --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320 --allow-real-prefix /home --never-real-prefix /api/private >"$scratch/router.log" 2>&1 &
 router_pid=$!
 
 ready=0

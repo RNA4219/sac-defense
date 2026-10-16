@@ -10,22 +10,40 @@ import unittest
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
-from ghostwall.core import Settings, decoy_token, load_key, new_key, parse_session
-from ghostwall.server import App, Server
-from ghostwall.store import Store
+from sac_defense.core import Settings, decoy_token, load_key, new_key, parse_session
+from sac_defense.server import App, Server
+from sac_defense.store import MAX_DB_PAGES, Store
 
 
 class RealHandler(BaseHTTPRequestHandler):
     hits = 0
+    last_path = ""
 
     def do_GET(self) -> None:
         type(self).hits += 1
+        type(self).last_path = self.path
         data = b"real application"
         self.send_response(200)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def log_message(self, *_: object) -> None:
+        pass
+
+
+class CaptureHandler(BaseHTTPRequestHandler):
+    authorization = ""
+    hits = 0
+
+    def do_GET(self) -> None:
+        type(self).authorization = self.headers.get("Authorization", "")
+        type(self).hits += 1
+        self.send_response(200)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def log_message(self, *_: object) -> None:
         pass
@@ -43,6 +61,7 @@ class IntegrationTests(unittest.TestCase):
         self.store = Store(self.database, self.key)
         self.store.initialize()
         RealHandler.hits = 0
+        RealHandler.last_path = ""
         self.real = ThreadingHTTPServer(("127.0.0.1", 0), RealHandler)
         self.decoy = Server(App(Settings(self.database, self.key_file, self.kill_switch, port=0, mode="decoy")))
         self.router = Server(
@@ -56,6 +75,7 @@ class IntegrationTests(unittest.TestCase):
                     upstream=f"http://127.0.0.1:{self.real.server_port}",
                     decoy=f"http://127.0.0.1:{self.decoy.server_port}",
                     never_real_prefixes=("/api/private",),
+                    allow_real_prefixes=("/home",),
                 )
             )
         )
@@ -88,7 +108,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(RealHandler.hits, 1)
         status, env, cookie = self.request("GET", "/%252eenv", normal_cookie)
         self.assertEqual(status, 200)
-        self.assertIn(b"INTERNAL_API_TOKEN=gwn_", env)
+        self.assertIn(b"INTERNAL_API_TOKEN=sac_", env)
         self.assertEqual(parse_session(self.key, cookie.split("=", 1)[1])[0], "d")
         token = decoy_token(self.key)
         status, body, _ = self.request("GET", "/internal/api/customers?limit=3", cookie, token)
@@ -136,8 +156,73 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(status, 404)
         self.assertEqual(RealHandler.hits, 1)
         status, body, _ = self.request("GET", "/api/privateer")
-        self.assertEqual((status, body), (200, b"real application"))
-        self.assertEqual(RealHandler.hits, 2)
+        self.assertEqual(status, 403)
+        self.assertEqual(RealHandler.hits, 1)
+
+    def test_real_route_is_explicit_and_forwarded_path_is_canonical(self) -> None:
+        self.assertEqual(self.request("GET", "/home/../api/private")[0], 404)
+        self.assertEqual(RealHandler.hits, 0)
+        self.assertEqual(self.request("GET", "/home/%2e%2e/home")[0], 200)
+        self.assertEqual(RealHandler.last_path, "/home")
+        self.assertEqual(self.request("GET", "/home/%2525252fapi/private")[0], 400)
+        self.assertEqual(self.request("GET", "/unknown")[0], 403)
+        self.assertEqual(RealHandler.hits, 1)
+
+    def test_router_refuses_real_upstream_without_allowlist(self) -> None:
+        with self.assertRaisesRegex(ValueError, "allow-real-prefix"):
+            Settings(self.database, self.key_file, self.kill_switch, upstream="http://127.0.0.1:8080", decoy="http://127.0.0.1:4320").validate()
+
+    def test_decoy_receives_only_verified_token_and_no_request_body(self) -> None:
+        CaptureHandler.authorization = ""
+        CaptureHandler.hits = 0
+        capture = ThreadingHTTPServer(("127.0.0.1", 0), CaptureHandler)
+        router = Server(App(Settings(
+            self.database, self.key_file, self.kill_switch, port=0, mode="router",
+            upstream=f"http://127.0.0.1:{self.real.server_port}",
+            decoy=f"http://127.0.0.1:{capture.server_port}",
+            allow_real_prefixes=("/home",), never_real_prefixes=("/api/private",),
+        )))
+        for server in (capture, router):
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            def send(method: str, token: str, body: bytes | None = None) -> int:
+                connection = http.client.HTTPConnection("127.0.0.1", router.server_port, timeout=3)
+                connection.request(method, "/.env", body=body, headers={"Authorization": f"Bearer {token}"})
+                response = connection.getresponse()
+                response.read()
+                connection.close()
+                return response.status
+
+            self.assertEqual(send("GET", "real-secret"), 200)
+            self.assertEqual(CaptureHandler.authorization, "")
+            self.assertEqual(send("GET", decoy_token(self.key)), 200)
+            self.assertEqual(CaptureHandler.authorization, f"Bearer {decoy_token(self.key)}")
+            self.assertEqual(send("POST", "real-secret", b"private-data"), 400)
+            self.assertEqual(CaptureHandler.hits, 2)
+        finally:
+            for server in (router, capture):
+                server.shutdown()
+                server.server_close()
+
+    def test_event_store_has_a_size_bound(self) -> None:
+        with patch("sac_defense.store.MAX_EVENTS", 100):
+            for _ in range(256):
+                self.store.event("0" * 32, "route_decision", "normal", "DISCOVERY", "/home")
+        with closing(sqlite3.connect(self.database)) as db:
+            self.assertLessEqual(db.execute("SELECT COUNT(*) FROM events").fetchone()[0], 100)
+            self.assertNotIn("/home", {row[0] for row in db.execute("SELECT path FROM events")})
+        with self.store.connect() as db:
+            self.assertLessEqual(db.execute("PRAGMA max_page_count").fetchone()[0], MAX_DB_PAGES)
+
+    def test_legacy_event_paths_are_hashed_at_startup(self) -> None:
+        with self.store.connect() as db:
+            db.execute("INSERT INTO events(at,sid,kind,route,stage,path,synthetic_count) VALUES (?,?,?,?,?,?,?)",
+                       ("2026-01-01", "0" * 32, "route_decision", "normal", "DISCOVERY", "/secret-value", 0))
+            db.execute("DELETE FROM meta WHERE key='event_path_format'")
+        self.store.initialize()
+        with self.store.connect() as db:
+            self.assertEqual(db.execute("SELECT path FROM events ORDER BY id DESC LIMIT 1").fetchone()[0],
+                             self.store._path_digest("/secret-value"))
 
     def test_kill_and_decoy_failure_never_fall_through(self) -> None:
         self.kill_switch.touch()

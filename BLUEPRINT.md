@@ -1,6 +1,6 @@
 ---
 intent_id: INT-GWN-001
-owner: ghostwall-nine
+owner: sac-defense
 status: active
 last_reviewed_at: 2026-10-16
 ---
@@ -27,7 +27,7 @@ last_reviewed_at: 2026-10-16
 | operator の kill switch file | suspicious flow を 403。real 側へ迂回しない |
 | 信頼された host event JSON | 同 session の risk escalation と host_signals 証跡 |
 
-HTTP payload、攻撃者の header、cookie、IP address、token は保存しない。SQLite には session ID、route、状態、イベント種別、合成レコード件数だけを保存する。
+HTTP payload、攻撃者の header、cookie、IP address、token は保存しない。SQLite には session ID、route、状態、イベント種別、正規化 path の HMAC 短縮値、合成レコード件数を保存する。既存 DB の平文 path は起動時に変換する。イベントは上限 10,000 件に保ち、DB 接続ごとにページ上限を設定する。
 
 ## 最小フロー
 

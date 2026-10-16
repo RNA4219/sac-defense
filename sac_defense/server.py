@@ -6,9 +6,12 @@ import http.client
 import json
 import posixpath
 import re
+import socket
+import sqlite3
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlsplit
 
 from .core import (
     COOKIE_NAME,
@@ -32,17 +35,19 @@ ALLOWED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 
 
 def normalized_path(target: str) -> str:
+    if not target.startswith("/") or len(target) > 2048 or any(ord(char) < 32 or ord(char) == 127 for char in target):
+        raise ValueError("invalid request target")
     parsed = urlsplit(target)
-    if parsed.scheme or parsed.netloc:
+    if parsed.scheme or parsed.netloc or parsed.fragment or re.search(r"%(?![0-9A-Fa-f]{2})", target):
         raise ValueError("absolute request targets are forbidden")
     path = parsed.path
     for _ in range(3):
-        decoded = unquote(path)
+        decoded = unquote(path, errors="strict")
         if decoded == path:
             break
         path = decoded
     path = path.replace("\\", "/")
-    if "\x00" in path:
+    if "%" in path or any(char in path for char in "\x00?#") or any(ord(char) < 32 or ord(char) == 127 for char in path):
         raise ValueError("invalid path")
     return posixpath.normpath("/" + path.lstrip("/"))
 
@@ -53,6 +58,22 @@ def is_sentinel(path: str) -> bool:
 
 def never_real_path(path: str, prefixes: tuple[str, ...]) -> bool:
     return any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes)
+
+
+def safe_decoy_target(path: str, query: str) -> str | None:
+    """Only synthetic API selectors may cross into the decoy network."""
+    if path == "/internal/api/customers":
+        allowed = {"page", "limit"}
+        valid = lambda key, value: value.isdecimal() and len(value) <= 4
+    elif path in {"/internal/api/orders", "/internal/api/support"}:
+        allowed = {"customer_id"}
+        valid = lambda key, value: re.fullmatch(r"C[0-9]{6}", value) is not None
+    else:
+        return path
+    pairs = parse_qsl(query, keep_blank_values=True)
+    if len(pairs) != len({key for key, _ in pairs}) or any(key not in allowed or not valid(key, value) for key, value in pairs):
+        return None
+    return path + ("?" + urlencode(pairs) if pairs else "")
 
 
 def strip_session_cookie(raw: str | None) -> str:
@@ -73,7 +94,7 @@ class App:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "GhostwallNine/0.1"
+    server_version = "SAC/0.2"
     protocol_version = "HTTP/1.1"
 
     @property
@@ -129,19 +150,23 @@ class Handler(BaseHTTPRequestHandler):
                 path = normalized_path(self.path)
             except ValueError:
                 self._json(400, {"error": "invalid_request_target"})
+                self.close_connection = True
                 return
             if self.headers.get("Transfer-Encoding"):
                 self._json(400, {"error": "chunked_body_not_supported"})
+                self.close_connection = True
                 return
-            if len(self.headers.get_all("Content-Length", [])) > 1 or len(self.headers.get_all("Host", [])) > 1:
+            if any(len(self.headers.get_all(name, [])) > 1 for name in ("Content-Length", "Host", "Authorization", "Cookie")):
                 self._json(400, {"error": "ambiguous_headers"})
+                self.close_connection = True
                 return
             raw_length = self.headers.get("Content-Length", "0")
             if not raw_length.isdecimal() or int(raw_length) > MAX_BODY:
                 self._json(413, {"error": "request_too_large"})
+                self.close_connection = True
                 return
             body = self.rfile.read(int(raw_length))
-            if path == "/_ghostwall/health":
+            if path == "/_sac/health":
                 self._json(200, {"status": "ok"})
             elif self.app.settings.mode == "router":
                 self._router(path, body)
@@ -149,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._decoy(path, body)
         except (BrokenPipeError, ConnectionResetError):
             return
-        except (OSError, ValueError, http.client.HTTPException):
+        except (OSError, ValueError, sqlite3.DatabaseError, http.client.HTTPException):
             # Any service or evidence failure closes the route; suspicious traffic never
             # falls through to the production upstream.
             self._json(503, {"error": "service_unavailable"})
@@ -162,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
                  or has_token or never_real_path(path, app.settings.never_real_prefixes))
         if session and (session[0] == "d" or app.store.risk(session[1]) >= 7):
             risky = True
-        route = "decoy" if risky else "normal"
+        route = "decoy" if risky else ("normal" if never_real_path(path, app.settings.allow_real_prefixes) else "block")
         if session and session[0] == "d" and not risky:
             raise AssertionError("decoy session cannot downgrade")
         if not session:
@@ -182,13 +207,24 @@ class Handler(BaseHTTPRequestHandler):
             self._json(403, {"error": "unavailable"}, signed)
             return
         app.store.event(sid, "route_decision", route, app.store.stage(sid), path)
+        if route == "block":
+            self._json(403, {"error": "path_not_allowed"}, signed)
+            return
+        if risky and body:
+            self._json(400, {"error": "body_not_supported"}, signed)
+            return
         origin = app.settings.decoy if risky else app.settings.upstream
         if not origin:
             self._json(503, {"error": "upstream_unavailable"}, signed)
             return
-        self._proxy(origin, body, signed, route == "decoy")
+        query = urlsplit(self.path).query
+        target = safe_decoy_target(path, query) if risky else quote(path, safe="/-._~") + ("?" + query if query else "")
+        if target is None:
+            self._json(400, {"error": "invalid_decoy_query"}, signed)
+            return
+        self._proxy(origin, target, body, signed, route == "decoy", has_token)
 
-    def _proxy(self, origin: str, body: bytes, signed: str, to_decoy: bool) -> None:
+    def _proxy(self, origin: str, target: str, body: bytes, signed: str, to_decoy: bool, has_token: bool) -> None:
         parsed = urlsplit(origin)
         connection_type = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
         connection = connection_type(parsed.hostname, parsed.port, timeout=3)
@@ -196,9 +232,9 @@ class Handler(BaseHTTPRequestHandler):
         connection_tokens = {token.strip().lower() for token in self.headers.get("Connection", "").split(",")}
         for name, value in self.headers.items():
             lower = name.lower()
-            if lower in HOP_HEADERS or lower in connection_tokens or lower.startswith(("x-ghostwall-", "x-forwarded-")) or lower in {"forwarded", "x-real-ip"}:
+            if lower in HOP_HEADERS or lower in connection_tokens or lower.startswith(("x-sac-", "x-ghostwall-", "x-forwarded-")) or lower in {"forwarded", "x-real-ip"}:
                 continue
-            if to_decoy and lower not in {"accept", "authorization", "content-type"}:
+            if to_decoy and lower not in {"accept", "content-type"}:
                 continue
             if lower == "cookie":
                 value = strip_session_cookie(value)
@@ -208,7 +244,9 @@ class Handler(BaseHTTPRequestHandler):
         if to_decoy:
             # The router sends only its selected signed session, never app cookies.
             headers["Cookie"] = f"{COOKIE_NAME}={signed}"
-        connection.request(self.command, self.path, body=body, headers=headers)
+            if has_token:
+                headers["Authorization"] = f"Bearer {decoy_token(self.app.key)}"
+        connection.request(self.command, target, body=body, headers=headers)
         response = connection.getresponse()
         data = response.read(MAX_BODY + 1)
         if len(data) > MAX_BODY:
@@ -217,7 +255,7 @@ class Handler(BaseHTTPRequestHandler):
         response_connection_tokens = {token.strip().lower() for token in (response.getheader("Connection") or "").split(",")}
         for name, value in response.getheaders():
             lower = name.lower()
-            if lower in HOP_HEADERS or lower in response_connection_tokens or lower.startswith("x-ghostwall-"):
+            if lower in HOP_HEADERS or lower in response_connection_tokens or lower.startswith(("x-sac-", "x-ghostwall-")):
                 continue
             if lower == "set-cookie" and to_decoy and value.startswith(f"{COOKIE_NAME}="):
                 continue
@@ -324,7 +362,30 @@ class Handler(BaseHTTPRequestHandler):
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
+    request_queue_size = 64
 
     def __init__(self, app: App) -> None:
+        self._slots = threading.BoundedSemaphore(64)
         super().__init__((app.settings.bind, app.settings.port), Handler)
         self.app = app
+
+    def get_request(self) -> tuple[socket.socket, Any]:
+        client, address = super().get_request()
+        client.settimeout(5)
+        return client, address
+
+    def process_request(self, request: socket.socket, client_address: Any) -> None:
+        if not self._slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._slots.release()
+            raise
+
+    def process_request_thread(self, request: socket.socket, client_address: Any) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()

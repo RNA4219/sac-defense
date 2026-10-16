@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ghostwall.evaluation import read_trials, summarize_trials
+from sac_defense.evaluation import read_trials, summarize_trials
 
 
 def trial(**changes: object) -> dict[str, object]:

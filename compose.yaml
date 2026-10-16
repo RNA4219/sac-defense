@@ -1,11 +1,22 @@
 services:
-  init:
+  init-router:
     build: .
     profiles: ["setup"]
-    command: ["init", "--database", "/state/state.db", "--key-file", "/state/deployment.key"]
+    command: ["init", "--database", "/state/state.db", "--key-file", "/secrets/deployment.key"]
     user: "65532:65532"
     volumes:
-      - ./runtime:/state
+      - ./runtime/router:/state
+      - ./runtime/secrets:/secrets
+    networks: [decoy_net]
+
+  init-decoy:
+    build: .
+    profiles: ["setup"]
+    command: ["init", "--database", "/state/state.db", "--key-file", "/secrets/deployment.key", "--reuse-key"]
+    user: "65532:65532"
+    volumes:
+      - ./runtime/decoy:/state
+      - ./runtime/secrets/deployment.key:/secrets/deployment.key:ro
     networks: [decoy_net]
 
   router:
@@ -17,9 +28,9 @@ services:
       - --database
       - /state/state.db
       - --key-file
-      - /state/deployment.key
+      - /secrets/deployment.key
       - --kill-switch
-      - /state/KILL
+      - /control/KILL
       - --bind
       - 0.0.0.0
       - --port
@@ -31,6 +42,8 @@ services:
       - --public-https
       - --never-real-prefix
       - /api/private
+      - --allow-real-prefix
+      - /home
     user: "65532:65532"
     read_only: true
     cap_drop: [ALL]
@@ -38,7 +51,9 @@ services:
     pids_limit: 64
     mem_limit: 256m
     volumes:
-      - ./runtime:/state
+      - ./runtime/router:/state
+      - ./runtime/secrets/deployment.key:/secrets/deployment.key:ro
+      - ./runtime/control:/control:ro
     ports:
       - 127.0.0.1:4319:4319
     networks: [front_net, prod_net, decoy_net]
@@ -53,9 +68,9 @@ services:
       - --database
       - /state/state.db
       - --key-file
-      - /state/deployment.key
+      - /secrets/deployment.key
       - --kill-switch
-      - /state/KILL
+      - /control/KILL
       - --bind
       - 0.0.0.0
       - --port
@@ -67,12 +82,14 @@ services:
     pids_limit: 64
     mem_limit: 256m
     volumes:
-      - ./runtime:/state
+      - ./runtime/decoy:/state
+      - ./runtime/secrets/deployment.key:/secrets/deployment.key:ro
+      - ./runtime/control:/control:ro
     networks: [decoy_net]
 
   real-demo:
     build: .
-    entrypoint: ["python", "-m", "ghostwall.demo_backend"]
+    entrypoint: ["python", "-m", "sac_defense.demo_backend"]
     user: "65532:65532"
     read_only: true
     cap_drop: [ALL]

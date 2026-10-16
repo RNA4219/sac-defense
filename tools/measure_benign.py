@@ -65,7 +65,7 @@ def main() -> int:
         routed.append(routed_sample[0])
         if direct_sample[1:3] != routed_sample[1:3] or direct_sample[1] != 200:
             mismatched += 1
-        if "gw_sid=d." in routed_sample[3]:
+        if "sac_sid=d." in routed_sample[3]:
             decoy += 1
     recorded = event_count(args.database) - before
     result = {

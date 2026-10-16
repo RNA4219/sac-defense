@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 MAX_BODY = 1_048_576
-COOKIE_NAME = "gw_sid"
+COOKIE_NAME = "sac_sid"
 DATASET_VERSION = "synthetic-v1"
 SESSION_RE = re.compile(r"^[dn]\.[0-9a-f]{32}\.[A-Za-z0-9_-]{22}$")
 
@@ -30,6 +30,7 @@ class Settings:
     decoy: str = ""
     public_https: bool = False
     never_real_prefixes: tuple[str, ...] = ()
+    allow_real_prefixes: tuple[str, ...] = ()
 
     def validate(self) -> None:
         if self.mode not in {"router", "decoy"}:
@@ -49,6 +50,8 @@ class Settings:
         if self.mode == "router" and not self.decoy:
             raise ValueError("router requires a fixed decoy origin")
         if self.mode == "router" and self.upstream:
+            if not self.allow_real_prefixes:
+                raise ValueError("router with a real upstream requires --allow-real-prefix")
             real = urlsplit(self.upstream)
             decoy = urlsplit(self.decoy)
             real_identity = (real.scheme, real.hostname, real.port or (443 if real.scheme == "https" else 80))
@@ -57,11 +60,11 @@ class Settings:
                 raise ValueError("real and decoy origins must differ")
         if self.mode == "decoy" and self.upstream:
             raise ValueError("decoy must not receive a real upstream origin")
-        for prefix in self.never_real_prefixes:
+        for prefix in (*self.never_real_prefixes, *self.allow_real_prefixes):
             if (not isinstance(prefix, str) or not re.fullmatch(r"/[A-Za-z0-9._~/-]+", prefix)
                     or prefix == "/" or "//" in prefix or prefix.endswith("/")
                     or any(part in {".", ".."} for part in prefix.split("/"))):
-                raise ValueError("never-real-prefix must be a canonical non-root path")
+                raise ValueError("route prefix must be a canonical non-root path")
 
 
 def load_key(path: Path) -> bytes:
@@ -90,7 +93,7 @@ def digest(key: bytes, label: str) -> bytes:
 
 def decoy_token(key: bytes) -> str:
     encoded = base64.urlsafe_b64encode(digest(key, "decoy-token:v1")[:24]).decode().rstrip("=")
-    return "gwn_" + encoded
+    return "sac_" + encoded
 
 
 def new_session(key: bytes, route: str) -> str:

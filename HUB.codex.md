@@ -1,4 +1,4 @@
-# Ghostwall Nine 作業ハブ
+# S.A.C. 作業ハブ
 
 1. [README.md](README.md) で用途と検証境界を確認する。
 2. [docs/requirements.md](docs/requirements.md) と [BLUEPRINT.md](BLUEPRINT.md) で対象要件を特定する。

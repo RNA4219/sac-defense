@@ -16,11 +16,12 @@ from .store import Store
 
 
 def parser() -> argparse.ArgumentParser:
-    command = argparse.ArgumentParser(prog="ghostwall")
+    command = argparse.ArgumentParser(prog="sac-defense")
     subs = command.add_subparsers(dest="command", required=True)
     init = subs.add_parser("init", help="create a deployment key and synthetic database")
     init.add_argument("--database", type=Path, required=True)
     init.add_argument("--key-file", type=Path, required=True)
+    init.add_argument("--reuse-key", action="store_true", help="initialize another isolated database with an existing deployment key")
 
     serve = subs.add_parser("serve", help="run the router or isolated decoy")
     serve.add_argument("--mode", choices=("router", "decoy"), required=True)
@@ -34,6 +35,8 @@ def parser() -> argparse.ArgumentParser:
     serve.add_argument("--public-https", action="store_true")
     serve.add_argument("--never-real-prefix", action="append", default=[],
                        help="canonical path prefix that must never reach the real upstream")
+    serve.add_argument("--allow-real-prefix", action="append", default=[],
+                       help="canonical path prefix permitted to reach the real upstream")
 
     kill = subs.add_parser("kill", help="block suspicious routes without forwarding them")
     kill.add_argument("--kill-switch", type=Path, required=True)
@@ -69,7 +72,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "init":
             if args.database.exists():
                 raise FileExistsError(args.database)
-            new_key(args.key_file)
+            if args.reuse_key:
+                load_key(args.key_file)
+            else:
+                new_key(args.key_file)
             store = Store(args.database, load_key(args.key_file))
             store.initialize()
             print(json.dumps({"status": "initialized", "seed_id": store.seed_id}))
@@ -85,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
                 decoy=args.decoy,
                 public_https=args.public_https,
                 never_real_prefixes=tuple(args.never_real_prefix),
+                allow_real_prefixes=tuple(args.allow_real_prefix),
             )
             server = Server(App(settings))
             print(json.dumps({"status": "listening", "mode": args.mode, "bind": args.bind, "port": args.port}), flush=True)
@@ -142,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1 if result["collisions"] or result["uncheckable"] else 0
         return 0
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"ghostwall: {exc}", file=sys.stderr)
+        print(f"sac-defense: {exc}", file=sys.stderr)
         return 2
 
 
