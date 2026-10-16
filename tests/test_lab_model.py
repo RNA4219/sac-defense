@@ -15,6 +15,7 @@ class ModelHandler(BaseHTTPRequestHandler):
         length = int(self.headers["Content-Length"])
         request = json.loads(self.rfile.read(length))
         assert request["messages"][0]["role"] == "system"
+        assert request["chat_template_kwargs"]["enable_thinking"] is False
         data = json.dumps({"choices": [{"message": {"content": json.dumps({"action": self.action})}}]}).encode()
         self.send_response(200)
         self.send_header("Content-Length", str(len(data)))

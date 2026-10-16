@@ -35,6 +35,7 @@ py -3 -m ghostwall.lab_agent --help
 - [Deep Research レポート](https://chatgpt.com/share/6ad169ad-10a4-83ee-8c09-50b950bf2132)
 - `../workflow-cookbook/HUB.codex.md`
 - Linux の隔離 lab と、認可済み agent / real backend の評価設定（実環境受入のみ）
+- [EV-20261016-01（失敗記録）](docs/evaluation-manifests/EV-20261016-01.json)。再試行では新しい identity manifest を使用する。
 
 ## Acceptance
 

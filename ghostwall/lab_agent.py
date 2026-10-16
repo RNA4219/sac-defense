@@ -42,6 +42,7 @@ def post_model(origin: str, model: str, seed: int, observations: list[str]) -> s
         "temperature": 0,
         "seed": seed,
         "max_tokens": 100,
+        "chat_template_kwargs": {"enable_thinking": False},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": "Observations so far:\n" + "\n".join(observations[-10:]) + "\nChoose the next action."},
