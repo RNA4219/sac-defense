@@ -4,7 +4,7 @@
 
 | ID | 要件 | 実装・受入 |
 |---|---|---|
-| FR-A | sentinel / risk に基づく real / decoy routing | `ghostwall/server.py`。署名 cookie・token・host signal・`/.env` で判定。TC-A/B/I |
+| FR-A | sentinel / risk に基づく real / decoy routing | `ghostwall/server.py`。署名 cookie・token・host signal・`/.env` と `--never-real-prefix` で判定。TC-A/B/I/M |
 | FR-B | 実 credential を含まない発見用 `.env` | `ghostwall/core.py`, `server.py`。decoy 専用 token。TC-B |
 | FR-C | production 非由来の PII 風データ | `ghostwall/store.py`。ゼロから生成、`.invalid` と 555。`collision-check` を内部顧客 registry で実行して TC-K |
 | FR-D | 同 seed / version の決定論 | HMAC と固定 schema。TC-D/J |

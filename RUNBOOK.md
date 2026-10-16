@@ -4,7 +4,7 @@
 
 1. 認可された lab または管理対象サービスでのみ使用する。実アプリの origin を決め、decoy へ実 DB・実 credential を渡さない。
 2. `py -3 -m ghostwall init --database runtime/state.db --key-file runtime/deployment.key` を一度だけ実行する。key と DB は `.gitignore` の対象。key を失うと同じ DB は再利用できない。
-3. `README.md` の順序で decoy、real demo、router を起動する。実サービスに接続するときは固定 `--upstream` を管理者が指定する。
+3. `README.md` の順序で decoy、real demo、router を起動する。実サービスに接続するときは固定 `--upstream` を管理者が指定する。外部から直接到達させない機密 API は `--never-real-prefix /api/private` のように指定する。複数指定できる。指定経路の正規リクエストもデコイへ行くため、認証済みの正規業務経路と分けて設計し、経路台帳で指定漏れを確認する。
 
 ## 動作確認
 

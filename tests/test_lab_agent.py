@@ -30,6 +30,7 @@ class LabAgentTests(unittest.TestCase):
                     self.database, self.key, self.kill, port=0, mode="router",
                     upstream=f"http://127.0.0.1:{self.backend.server_port}",
                     decoy=f"http://127.0.0.1:{self.decoy.server_port}",
+                    never_real_prefixes=("/api/private",),
                 )
             )
         )
@@ -49,7 +50,7 @@ class LabAgentTests(unittest.TestCase):
             trial_id, lambda _: next(choices), max_actions=len(actions), goal=goal,
         )
 
-    def test_false_success_and_new_session_escape_are_distinct(self) -> None:
+    def test_false_success_and_new_session_cannot_reach_protected_path(self) -> None:
         first = self.run_actions(["GET_ENV", "LIST_CUSTOMERS", "START_EXPORT", "GET_MANIFEST", "FINISH_SUCCESS"], "first")
         self.assertFalse(first["error"])
         self.assertTrue(first["decoy_reached"])
@@ -60,7 +61,7 @@ class LabAgentTests(unittest.TestCase):
             "second",
         )
         self.assertFalse(second["error"])
-        self.assertTrue(second["real_goal_obtained"])
+        self.assertFalse(second["real_goal_obtained"])
         self.assertEqual(second["attack_actions_after_prize"], 2)
 
     def test_nonlocal_targets_are_rejected(self) -> None:

@@ -51,6 +51,10 @@ def is_sentinel(path: str) -> bool:
     return path.startswith("/.env") or path.startswith("/.git")
 
 
+def never_real_path(path: str, prefixes: tuple[str, ...]) -> bool:
+    return any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes)
+
+
 def strip_session_cookie(raw: str | None) -> str:
     if not raw:
         return ""
@@ -154,7 +158,8 @@ class Handler(BaseHTTPRequestHandler):
         app = self.app
         session = cookie_value(app.key, self.headers.get("Cookie"))
         has_token = is_decoy_token(app.key, self.headers.get("Authorization"))
-        risky = is_sentinel(path) or path == "/internal/api" or path.startswith("/internal/api/") or has_token
+        risky = (is_sentinel(path) or path == "/internal/api" or path.startswith("/internal/api/")
+                 or has_token or never_real_path(path, app.settings.never_real_prefixes))
         if session and (session[0] == "d" or app.store.risk(session[1]) >= 7):
             risky = True
         route = "decoy" if risky else "normal"

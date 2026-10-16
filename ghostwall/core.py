@@ -29,6 +29,7 @@ class Settings:
     upstream: str = ""
     decoy: str = ""
     public_https: bool = False
+    never_real_prefixes: tuple[str, ...] = ()
 
     def validate(self) -> None:
         if self.mode not in {"router", "decoy"}:
@@ -56,6 +57,11 @@ class Settings:
                 raise ValueError("real and decoy origins must differ")
         if self.mode == "decoy" and self.upstream:
             raise ValueError("decoy must not receive a real upstream origin")
+        for prefix in self.never_real_prefixes:
+            if (not isinstance(prefix, str) or not re.fullmatch(r"/[A-Za-z0-9._~/-]+", prefix)
+                    or prefix == "/" or "//" in prefix or prefix.endswith("/")
+                    or any(part in {".", ".."} for part in prefix.split("/"))):
+                raise ValueError("never-real-prefix must be a canonical non-root path")
 
 
 def load_key(path: Path) -> bytes:

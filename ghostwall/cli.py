@@ -32,6 +32,8 @@ def parser() -> argparse.ArgumentParser:
     serve.add_argument("--upstream", default="")
     serve.add_argument("--decoy", default="")
     serve.add_argument("--public-https", action="store_true")
+    serve.add_argument("--never-real-prefix", action="append", default=[],
+                       help="canonical path prefix that must never reach the real upstream")
 
     kill = subs.add_parser("kill", help="block suspicious routes without forwarding them")
     kill.add_argument("--kill-switch", type=Path, required=True)
@@ -82,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
                 upstream=args.upstream,
                 decoy=args.decoy,
                 public_https=args.public_https,
+                never_real_prefixes=tuple(args.never_real_prefix),
             )
             server = Server(App(settings))
             print(json.dumps({"status": "listening", "mode": args.mode, "bind": args.bind, "port": args.port}), flush=True)

@@ -8,7 +8,7 @@
 
 ```text
 HTTP client → router ── benign ──→ real application
-                 └── sentinel / decoy session ──→ decoy service ──→ synthetic SQLite
+                 └── sentinel / decoy session / never-real path ──→ decoy service ──→ synthetic SQLite
                          failure / kill switch ──→ block
 ```
 
@@ -32,14 +32,14 @@ py -3 -m ghostwall.demo_backend
 さらに別の端末で router を起動します。
 
 ```powershell
-py -3 -m ghostwall serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8080 --decoy http://127.0.0.1:4320
+py -3 -m ghostwall serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8080 --decoy http://127.0.0.1:4320 --never-real-prefix /api/private
 ```
 
 `GET http://127.0.0.1:4319/.env` から始め、返った token を `Authorization: Bearer ...` に設定して `/internal/api/customers` を照会できます。詳しい手順と停止操作は [RUNBOOK](RUNBOOK.md) を参照してください。
 
 ## 現時点の検証境界
 
-自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。Linux の Docker 分離と decoy 停止時の fail-closed は GitHub CI でも確認しています。[Qwen3.5 4B の限定 pilot](docs/evidence/EV-20261016-04-result.md) では合成 manifest 読取後の成功申告と探索終了を観測しました。Tetragon/eBPF の実イベント接続と本番環境での防御効果は、対象環境での受入が必要です。
+自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。Linux の Docker 分離と decoy 停止時の fail-closed は GitHub CI でも確認しています。[Qwen3.5 4B の限定 pilot](docs/evidence/EV-20261016-04-result.md) では合成 manifest 読取後の成功申告と探索終了を観測しました。[DeepInfra Qwen の追加評価](docs/evidence/EV-20261016-07-result.md) では cookie 再作成による抜け道を検出し、`--never-real-prefix` を追加しました。指定経路は cookie の有無に関係なく実アプリへ送られません。対象サービス固有の機密経路の網羅、Tetragon/eBPF の実イベント接続、本番環境での防御効果は導入先での受入が必要です。
 
 ## 文書入口
 

@@ -27,11 +27,11 @@ py -3 -m ghostwall evaluate --file lab/trials.jsonl --termination-budget 2
 ```powershell
 py -3 -m ghostwall.lab_backend --port 8081
 py -3 -m ghostwall serve --mode decoy --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
-py -3 -m ghostwall serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320
+py -3 -m ghostwall serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320 --never-real-prefix /api/private
 py -3 -m ghostwall.lab_agent --base-url http://127.0.0.1:4319 --model-url http://127.0.0.1:8080 --model <model-id> --condition FalseSuccess --seed 1 --trial-id lab-001 --output lab/trials.jsonl
 ```
 
-Control は同じ agent と model を `--base-url http://127.0.0.1:8081 --condition Control` で動かす。比較実験は評価 identity manifest の preflight 後に開始し、複数 seed・trial と負の対照を含める。小規模 pilot の結果を一般的な防御効果へ外挿しない。
+Control は同じ agent と model を `--base-url http://127.0.0.1:8081 --condition Control` で動かす。比較実験は評価 identity manifest の preflight 後に開始し、複数 seed・trial と負の対照を含める。`--never-real-prefix` は cookie を破棄した新セッションでも指定した機密経路を実上流へ送らない。指定漏れした別経路への到達は防げないため、対象サービスの経路台帳を受入時に照合する。小規模 pilot の結果を一般的な防御効果へ外挿しない。
 
 export/manifest 到達後の終了を観測する別実験では `--goal export` を両条件に付け、最大行動数と目的を新しい manifest へ固定する。既定の `--goal collect` を使った既存 trial と後から混ぜない。
 

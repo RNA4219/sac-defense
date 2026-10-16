@@ -2,6 +2,7 @@
 
 ## Unreleased - 2026-10-16
 
+- Hosted Qwen 比較で cookie 再作成からの実ゴール到達を発見。`--never-real-prefix` と再接続の統合試験を追加。
 - DeepInfra の Qwen を固定 HTTPS endpoint で呼ぶ bounded lab runner を追加。デコイ token は外部モデルへ送る観測から伏せる。
 - Qwen3.5 4B の限定比較を Workflow-cookbook の事前・事後 manifest で記録。合成 manifest 後の成功申告と終了を観測。
 - Windows / Ubuntu CI の良性経路400組を比較し、CI に p95 遅延・経路 event・誤誘導 gate を追加。

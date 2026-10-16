@@ -29,6 +29,8 @@ services:
       - --decoy
       - http://decoy:4320
       - --public-https
+      - --never-real-prefix
+      - /api/private
     user: "65532:65532"
     read_only: true
     cap_drop: [ALL]

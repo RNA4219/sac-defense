@@ -55,6 +55,7 @@ class IntegrationTests(unittest.TestCase):
                     mode="router",
                     upstream=f"http://127.0.0.1:{self.real.server_port}",
                     decoy=f"http://127.0.0.1:{self.decoy.server_port}",
+                    never_real_prefixes=("/api/private",),
                 )
             )
         )
@@ -125,6 +126,18 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(status, 404)
         self.assertEqual(RealHandler.hits, 1)
         self.assertEqual(self.store.stage(parse_session(self.key, cookie.split("=", 1)[1])[1]), "SATIATED")
+
+    def test_never_real_prefix_survives_cookie_reset(self) -> None:
+        status, _, _ = self.request("GET", "/home")
+        self.assertEqual(status, 200)
+        self.assertEqual(RealHandler.hits, 1)
+        for target in ("/api/private/customers", "/api/%70rivate/customers", "/api/private"):
+            status, _, _ = self.request("GET", target)
+            self.assertEqual(status, 404)
+        self.assertEqual(RealHandler.hits, 1)
+        status, body, _ = self.request("GET", "/api/privateer")
+        self.assertEqual((status, body), (200, b"real application"))
+        self.assertEqual(RealHandler.hits, 2)
 
     def test_kill_and_decoy_failure_never_fall_through(self) -> None:
         self.kill_switch.touch()
