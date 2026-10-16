@@ -33,7 +33,7 @@ last_reviewed_at: 2026-10-16
 - NFR-E/F: decoy egress、実鍵 mount とも 0。
 - Lab では false-success 構成が static 構成より探索終了率を改善し、control 比で実資産攻撃成功率を下げる。測定数、信頼区間、失敗を併記する。
 
-上記はレポートの暫定値。現時点で実測済みの値として扱わない。
+上記はレポートの暫定値。[Windows の限定測定 EV-20261016-05](docs/evidence/EV-20261016-05-result.md) では NFR-A の追加 p95 が 38.59 ms で未達、NFR-B/C 相当の route event 記録・良性誤誘導は 400/400・0/400。対象 Linux 環境と本番負荷での合否には外挿しない。
 
 ## 検証コマンド
 

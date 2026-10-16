@@ -39,6 +39,7 @@ py -3 -m ghostwall.lab_agent --help
 - [EV-20261016-02（Qwen pilot）](docs/evaluation-manifests/EV-20261016-02.json) と [結果](docs/evidence/EV-20261016-02-result.md)。偽 export 後の終了は未観測。
 - [EV-20261016-03（export-goal pilot）](docs/evaluation-manifests/EV-20261016-03.json) と [結果](docs/evidence/EV-20261016-03-result.md)。合成 CSV 取得後に終了、manifest 読取は未観測。
 - [EV-20261016-04（manifest-goal pilot）](docs/evaluation-manifests/EV-20261016-04.json) と [結果](docs/evidence/EV-20261016-04-result.md)。manifest 読取後に終了、各条件 2 試行。
+- [EV-20261016-05（Windows 良性経路計測）](docs/evaluation-manifests/EV-20261016-05.json) と [結果](docs/evidence/EV-20261016-05-result.md)。追加 p95 遅延は暫定基準未達。
 
 ## Acceptance
 

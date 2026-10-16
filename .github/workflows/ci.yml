@@ -18,3 +18,8 @@ jobs:
       - run: python -m coverage report --omit=ghostwall/demo_backend.py,ghostwall/lab_backend.py,ghostwall/__main__.py --fail-under=80
       - run: docker compose config --quiet
       - run: bash tests/compose_smoke.sh
+      - run: bash tests/linux_benign_smoke.sh "$RUNNER_TEMP/linux-benign.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-benign-measurement
+          path: ${{ runner.temp }}/linux-benign.json

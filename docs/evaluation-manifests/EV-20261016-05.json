@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.1",
+  "profile": "performance",
+  "manifest_id": "eval:20261016-05",
+  "task_id": "TASK-GWN-20261016-01",
+  "owner": "RNA4219 / Codex",
+  "purpose": "comparison",
+  "status": "completed",
+  "freeze_date": "2026-10-16",
+  "hypothesis": "For 400 benign /home requests, the local router adds at most 30 ms at the paired 95th percentile relative to the direct lab backend.",
+  "action_delta": "Candidate traverses Ghostwall router; Control connects to the same lab backend directly. Both request GET /home.",
+  "negative_control": "Every paired /home response must have identical HTTP status and body, and no candidate request may route to decoy.",
+  "identity": {
+    "legacy": {
+      "label": "Control",
+      "source_path": "ghostwall/lab_backend.py",
+      "source_revision": "9cb8402edbd313b0f8f12d6d5ea31f7fa13b3aa1",
+      "source_sha256": "sha256:78d2ac96789c38e365dadab1f1bdfaf02c687acc12c5b83e4132bc97f09f8701",
+      "input_sha256": "sha256:e9165bc868924a12daee9f6daaffe7bbba2aecdf58afe3893d14d89aa6ad5b18"
+    },
+    "candidate": {
+      "label": "FalseSuccess",
+      "source_path": "ghostwall/server.py+store.py+core.py",
+      "source_revision": "9cb8402edbd313b0f8f12d6d5ea31f7fa13b3aa1",
+      "source_sha256": "sha256:dadc50827e2ed0635a24598ea21f2d3e3011a0609640744b3f4c7d7557b73b89",
+      "input_sha256": "sha256:9eccf5e631d390132c52c65e18e82b38a06f4ca10f8aa07d70149294a09bc599"
+    },
+    "runner": {
+      "id": "local-benign-http-benchmark-v1",
+      "sha256": "sha256:f5e7a5254051a6c1472284c49bc0b8e8bf609ee89f02052ef375eeab8df3e3bd"
+    }
+  },
+  "evaluation": {
+    "dataset_id": "lab-home-response-v1",
+    "dataset_sha256": "sha256:5ada44021b333619dd15737ad85f138ba3c1fbb94f98b9ce8a30c96361ee6bbc",
+    "measurement_unit": "operation",
+    "primary_metric": "added_p95_ms",
+    "model_version": "not_used: benign HTTP benchmark makes no model calls",
+    "policy_version": "ghostwall-nine-0.1.1@9cb8402edbd313b0f8f12d6d5ea31f7fa13b3aa1",
+    "configuration": {
+      "pairs": 400,
+      "path": "/home",
+      "direct": "http://127.0.0.1:8081",
+      "router": "http://127.0.0.1:4319",
+      "warmup_requests_per_origin": 1,
+      "pair_order": "alternating",
+      "added_p95_definition": "nearest-rank p95 of router latency minus direct latency per pair",
+      "secondary_gates": {
+        "event_record_rate_min": 0.99,
+        "benign_misdirection_rate_max_exclusive": 0.01
+      },
+      "negative_control": "equal HTTP status and body for each pair"
+    }
+  },
+  "external_mutations": {
+    "registry_frozen": true,
+    "submission_frozen": true
+  },
+  "outcome": {
+    "artifact_path": "../evidence/EV-20261016-05-benign.json",
+    "artifact_sha256": "sha256:fcd141b64c1bb26e13c16106c5d73a868d396c71ddb94d4a93a1f6a0205d8075",
+    "records": 400,
+    "error_count": 0,
+    "crash_count": 0,
+    "timeout_count": 0,
+    "metrics": {
+      "added_p95_ms": 38.5931,
+      "event_record_rate": 1.0,
+      "benign_misdirection_rate": 0.0,
+      "negative_control_mismatch_rate": 0.0
+    }
+  },
+  "input_hash_basis": "SHA-256 of canonical UTF-8 JSON with keys condition, configuration, dataset_sha256; sorted keys and compact separators."
+}
