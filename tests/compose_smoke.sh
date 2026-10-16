@@ -21,8 +21,24 @@ test "$(curl --fail --silent http://127.0.0.1:4319/home)" = "real-demo (no data)
 curl --fail --silent --show-error --output /dev/null http://127.0.0.1:4319/.env
 
 docker compose exec -T decoy python -c 'print("decoy alive")' >/dev/null
+decoy_id=$(docker compose ps -q decoy)
+docker inspect "$decoy_id" | python -c '
+import json, sys
+container = json.load(sys.stdin)[0]
+host = container["HostConfig"]
+mounts = container["Mounts"]
+networks = container["NetworkSettings"]["Networks"]
+assert host["ReadonlyRootfs"] and not host["Privileged"]
+assert "ALL" in host["CapDrop"]
+assert [mount["Destination"] for mount in mounts] == ["/state"]
+assert len(networks) == 1 and next(iter(networks)).endswith("_decoy_net")
+'
 if docker compose exec -T decoy python -c 'import socket; socket.create_connection(("real-demo", 8080), timeout=2)' >/dev/null 2>&1; then
   echo "decoy reached real-demo" >&2
+  exit 1
+fi
+if docker compose exec -T decoy python -c 'import socket; socket.getaddrinfo("example.com", 443)' >/dev/null 2>&1; then
+  echo "decoy resolved an external DNS name" >&2
   exit 1
 fi
 if docker compose exec -T decoy python -c 'import socket; socket.create_connection(("1.1.1.1", 443), timeout=2)' >/dev/null 2>&1; then

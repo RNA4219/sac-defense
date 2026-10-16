@@ -156,6 +156,33 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
         self.assertEqual(len(self.store.rows("orders")), 96)
 
+    def test_same_session_trajectory_replays_identical_responses(self) -> None:
+        status, env, cookie = self.request("GET", "/.env")
+        self.assertEqual(status, 200)
+        token = decoy_token(self.key)
+
+        def trajectory() -> list[tuple[int, bytes]]:
+            output: list[tuple[int, bytes]] = []
+            for method, path in (
+                ("GET", "/internal/api/customers?limit=3"),
+                ("GET", "/internal/api/orders?customer_id=C000001"),
+                ("GET", "/internal/api/support?customer_id=C000001"),
+                ("POST", "/internal/api/export"),
+            ):
+                code, body, _ = self.request(method, path, cookie, token)
+                output.append((code, body))
+            job = json.loads(output[-1][1])["job_id"]
+            for suffix in ("manifest", "download"):
+                code, body, _ = self.request("GET", f"/internal/api/export/{job}/{suffix}", cookie, token)
+                output.append((code, body))
+            return output
+
+        first = trajectory()
+        second = trajectory()
+        self.assertEqual(first, second)
+        self.assertTrue(all(code == 200 for code, _ in first))
+        self.assertIn(b"INTERNAL_API_TOKEN=", env)
+
 
 if __name__ == "__main__":
     unittest.main()

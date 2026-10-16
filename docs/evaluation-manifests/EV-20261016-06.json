@@ -5,7 +5,7 @@
   "task_id": "TASK-GWN-20261016-01",
   "owner": "RNA4219 / Codex",
   "purpose": "comparison",
-  "status": "frozen",
+  "status": "completed",
   "freeze_date": "2026-10-16",
   "hypothesis": "For 400 benign /home request pairs on the GitHub Linux runner, Ghostwall adds at most 30 ms at the paired 95th percentile relative to the direct lab backend.",
   "action_delta": "Candidate traverses Ghostwall router; Control connects to the same lab backend directly. Both request GET /home.",
@@ -60,6 +60,20 @@
   "external_mutations": {
     "registry_frozen": true,
     "submission_frozen": true
+  },
+  "outcome": {
+    "artifact_path": "../evidence/EV-20261016-06-linux-benign.json",
+    "artifact_sha256": "sha256:668f38a62226824e2d6251ecf2365f7f5d76014a52111d41a2160d3527887d41",
+    "records": 400,
+    "error_count": 0,
+    "crash_count": 0,
+    "timeout_count": 0,
+    "metrics": {
+      "added_p95_ms": 2.462237,
+      "event_record_rate": 1.0,
+      "benign_misdirection_rate": 0.0,
+      "negative_control_mismatch_rate": 0.0
+    }
   },
   "input_hash_basis": "SHA-256 of canonical UTF-8 JSON with keys condition, configuration, dataset_sha256; sorted keys and compact separators."
 }

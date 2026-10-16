@@ -19,6 +19,7 @@ jobs:
       - run: docker compose config --quiet
       - run: bash tests/compose_smoke.sh
       - run: bash tests/linux_benign_smoke.sh "$RUNNER_TEMP/linux-benign.json"
+      - run: python -c "import json,os; d=json.load(open(os.environ['RUNNER_TEMP']+'/linux-benign.json')); assert d['added_p95_ms'] <= 30 and d['negative_control_mismatches'] == 0 and d['decoy_routes'] == 0 and d['recorded_route_events'] == d['pairs']"
       - uses: actions/upload-artifact@v4
         with:
           name: linux-benign-measurement
