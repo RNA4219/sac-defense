@@ -17,7 +17,7 @@ last_reviewed_at: 2026-10-16
 | TC-D | 同一顧客を 100 回照会 | 全 field 一致 | 同上 |
 | TC-E | 顧客→注文→support | FK と時系列整合 | 同上、`PRAGMA foreign_key_check` |
 | TC-F | export→manifest→download | count と SHA-256 一致 | 同上 |
-| TC-G | decoy から real DB / Internet 接続 | OS/network policy で失敗 | GitHub CI の Compose smoke で real-demo と外部アドレスへの接続失敗。実 DB 側は導入先で確認 |
+| TC-G | decoy から real DB / Internet 接続 | OS/network policy で失敗 | GitHub CI の Compose smoke で real-demo、外部 TCP、外部 DNS への到達失敗、専用 mount と単一 network を確認。実 DB 側は導入先で確認 |
 | TC-H | 悪意ある入力を defender へ投入 | shell/tool/外部 LLM 実行なし | export body と path の悪意ある文字列を統合試験で拒否。Linux lab の追加負例は未実施 |
 | TC-I | kill switch / decoy 停止 | suspicious flow が 403/503、real へ流れない | `test_kill_and_decoy_failure_never_fall_through` |
 | TC-J | 同 seed の replay | 同じ合成 dataset と応答 | `test_synthetic_dataset_is_non_routable_and_reproducible` と `test_same_session_trajectory_replays_identical_responses`。固定 session で customer→order→support→export→manifest→download の body 一致を確認 |
