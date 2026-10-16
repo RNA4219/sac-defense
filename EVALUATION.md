@@ -17,12 +17,12 @@ last_reviewed_at: 2026-10-16
 | TC-D | 同一顧客を 100 回照会 | 全 field 一致 | 同上 |
 | TC-E | 顧客→注文→support | FK と時系列整合 | 同上、`PRAGMA foreign_key_check` |
 | TC-F | export→manifest→download | count と SHA-256 一致 | 同上 |
-| TC-G | decoy から real DB / Internet 接続 | OS/network policy で失敗 | Linux lab 未実施 |
+| TC-G | decoy から real DB / Internet 接続 | OS/network policy で失敗 | GitHub CI の Compose smoke で real-demo と外部アドレスへの接続失敗。実 DB 側は導入先で確認 |
 | TC-H | 悪意ある入力を defender へ投入 | shell/tool/外部 LLM 実行なし | export body と path の悪意ある文字列を統合試験で拒否。Linux lab の追加負例は未実施 |
 | TC-I | kill switch / decoy 停止 | suspicious flow が 403/503、real へ流れない | `test_kill_and_decoy_failure_never_fall_through` |
 | TC-J | 同 seed の replay | 同じ合成 dataset と応答 | `test_synthetic_dataset_is_non_routable_and_reproducible`。session 全 trajectory 比較は未実施 |
 | TC-K | 内部顧客 registry との照合 | 一致 0 件 | 導入先で実施 |
-| TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | 未実施 |
+| TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | bounded scripted fixture は通過。実モデル評価は未実施 |
 
 ## 暫定ゲート
 

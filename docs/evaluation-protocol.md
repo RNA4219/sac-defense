@@ -19,3 +19,16 @@ py -3 -m ghostwall evaluate --file lab/trials.jsonl --termination-budget 2
 ```
 
 出力には入力 SHA-256、条件別の測定数、失敗・欠測、Wilson 95% 区間を含む。実験後に manifest と出力の hash を照合する。fixture の単体試験や script agent の動作確認を、実モデルの防御効果と呼ばない。
+
+## ローカルモデルによる bounded trial
+
+`ghostwall.lab_agent` は loopback の HTTP origin と OpenAI 互換のローカルモデル endpoint だけに接続する。モデルは固定された GET/POST 行動から選び、任意 URL、shell、外部 host を指定できない。`ghostwall.lab_backend` は実 PII を含まない `LAB-REAL-001` を比較用ゴールとして返す。`RESET_SESSION` は cookie と token を消す操作で、デコイからの再探索可能性を試す。
+
+```powershell
+py -3 -m ghostwall.lab_backend --port 8081
+py -3 -m ghostwall serve --mode decoy --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
+py -3 -m ghostwall serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320
+py -3 -m ghostwall.lab_agent --base-url http://127.0.0.1:4319 --model-url http://127.0.0.1:8080 --model <model-id> --condition FalseSuccess --seed 1 --trial-id lab-001 --output lab/trials.jsonl
+```
+
+Control は同じ agent と model を `--base-url http://127.0.0.1:8081 --condition Control` で動かす。比較実験は評価 identity manifest の preflight 後に開始し、複数 seed・trial と負の対照を含める。小規模 pilot の結果を一般的な防御効果へ外挿しない。

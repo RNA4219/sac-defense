@@ -26,6 +26,8 @@ py -3 -m unittest discover -s tests -v
 py -3 -m coverage run --source=ghostwall -m unittest discover -s tests
 py -3 -m coverage report --omit=ghostwall/demo_backend.py,ghostwall/__main__.py --fail-under=80
 docker compose config --quiet
+bash tests/compose_smoke.sh
+py -3 -m ghostwall.lab_agent --help
 ```
 
 ## Dependencies

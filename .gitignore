@@ -8,5 +8,6 @@ __pycache__/
 *.key
 .env
 runtime/
+lab/
 dist/
 *.egg-info/
