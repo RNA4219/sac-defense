@@ -1,59 +1,80 @@
 # S.A.C. — Synthetic Adversary Containment
 
-**認可済み HTTP サービス向け欺瞞型防御基盤**です。探索セッションを実アプリから切り離し、架空の一貫した顧客・注文・サポート情報を提示します。偽の export と manifest まで状態を維持します。S.A.C. は Synthetic Adversary Containment の略で、合成環境へ攻撃エージェントを誘導して実資産から隔離する設計を表します。
+S.A.C. は、認可された HTTP サービスの前に置く**デコイ付きルーター**です。不審な探索を実アプリから切り離し、デコイ（架空の顧客・注文・サポート情報を持つ環境）へ送ります。防御判断には LLM を使わず、経路規則とセッション状態で転送先を決めます。
 
-設計の出発点は[共有された Deep Research レポート](https://chatgpt.com/share/6ad169ad-10a4-83ee-8c09-50b950bf2132)です。レポートの FR-A〜J を [要件](docs/requirements.md) に展開し、Workflow-cookbook の Tier 2 文書構成（[BLUEPRINT](BLUEPRINT.md)、[RUNBOOK](RUNBOOK.md)、[GUARDRAILS](GUARDRAILS.md)、[EVALUATION](EVALUATION.md)）で追跡します。
+このリポジトリは実験用のリファレンス実装です。自分が管理するサービスや、明示的に認可された環境で試してください。
 
-## 構成
+## 何をするか
 
 ```text
-HTTP client → router ── allowlisted normal route ──→ real application
-                 └── sentinel / decoy session / never-real path ──→ decoy service ──→ synthetic SQLite
-                         unknown path / failure / kill switch ──→ block
+HTTP client → router ── 許可した通常経路 ──→ 実アプリ
+                 ├── 保護経路・探索セッション ──→ デコイ ──→ 架空のデータ
+                 └── 未登録経路・障害・停止操作 ──→ 遮断
 ```
 
-デコイは実データから生成しません。連絡先は `.invalid` と 555 番号を使い、decoy token はこのリポジトリのデコイ内でしか通りません。HTTP リクエストに LLM、シェル、外部コールバックを使いません。`compose.yaml` ではデコイを内部ネットワークのみに接続し、router との通信は Unix ソケットに限定します。router と decoy は別の書き込み可能 DB を使います。
+- 実アプリへ転送する経路は `--allow-real-prefix` で明示します。`--never-real-prefix` の保護経路とデコイ判定を優先し、未登録経路は 403 を返します。
+- デコイは同じセッション内で整合する架空データ、トークン、export、manifest を返します。実データは使わず、連絡先には `.invalid` ドメインと 555 番号を使います。
+- デコイが使えないときは実アプリへ迂回せず、503 で閉じます。kill switch で遮断することもできます。
+- リクエスト処理中に LLM、シェル、外部コールバックは実行しません。
 
 ## ローカルで試す
 
-Python 3.11 以降を使用します。
+Python 3.11 以降が必要です。以下は PowerShell の例です。macOS / Linux では `py -3` を `python3`、`curl.exe` を `curl` に読み替えてください。外部 LLM の API キーや Docker は不要です。
+
+まずリポジトリを取得し、デモ用の鍵と DB を作ります。`init` は新しい環境で一度だけ実行します。
 
 ```powershell
+git clone https://github.com/RNA4219/sac-defense.git
+cd sac-defense
 py -3 -m sac_defense init --database runtime/router.db --key-file runtime/deployment.key
 py -3 -m sac_defense init --database runtime/decoy.db --key-file runtime/deployment.key --reuse-key
+```
+
+次の 3 つを、それぞれ別の端末で起動します。
+
+```powershell
+# 端末 1: デコイ
 py -3 -m sac_defense serve --mode decoy --database runtime/decoy.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
 ```
 
-別の端末で、実アプリ役を起動します。
-
 ```powershell
+# 端末 2: 実アプリの代わりになる空のデモ
 py -3 -m sac_defense.demo_backend
 ```
 
-さらに別の端末で router を起動します。
-
 ```powershell
+# 端末 3: ルーター
 py -3 -m sac_defense serve --mode router --database runtime/router.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8080 --decoy http://127.0.0.1:4320 --allow-real-prefix /home --never-real-prefix /api/private
 ```
 
-`GET http://127.0.0.1:4319/.env` から始め、返った token を `Authorization: Bearer ...` に設定して `/internal/api/customers` を照会できます。詳しい手順と停止操作は [RUNBOOK](RUNBOOK.md) を参照してください。
+4 つ目の端末で、転送先の違いを確認できます。
 
-このローカル起動例は loopback TCP の動作確認用です。隔離を確認する場合は Linux の `compose.yaml` を使い、decoy から router の HTTP 入口へ接続できないことも検査してください。
+```powershell
+curl.exe -i http://127.0.0.1:4319/home     # 200: 実アプリ役の「real-demo (no data)」
+curl.exe -i http://127.0.0.1:4319/.env     # 200: デコイの架空トークン
+curl.exe -i http://127.0.0.1:4319/unknown  # 403: 未登録経路
+```
 
-実アプリへの転送は `--allow-real-prefix` の指定経路だけです。未登録経路は 403、`--never-real-prefix` とデコイ判定は許可経路より優先します。対象サービスの正規経路を台帳から列挙してください。デコイ行きのリクエストは任意の `Authorization` と本文を転送せず、検証した decoy token のみ付け直します。
+各サーバーは `Ctrl+C` で停止します。この起動例は動作確認用で、デモ backend は `0.0.0.0:8080` で待ち受けます。公開ネットワークに置かず、隔離構成を試す場合は Linux の [Docker Compose 手順](RUNBOOK.md)を使ってください。
 
-## 現時点の検証境界
+## 導入前に知っておくこと
 
-自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。[現行版の Linux CI](docs/evidence/EV-20261016-10-result.md) では Docker と Unix ソケットの隔離、decoy 停止時の fail-closed、良性経路 400 組を確認しました。[DeepInfra Qwen の旧版評価](docs/evidence/EV-20261016-07-result.md) で cookie 再作成による抜け道を検出し、`--never-real-prefix` を追加しました。現行の強化後版を[ローカル Qwen](docs/evidence/EV-20261016-11-result.md) と [DeepInfra Qwen](docs/evidence/EV-20261016-12-result.md) で再評価し、候補の実ゴール到達はそれぞれ 0/3、0/5 でした。DeepInfra では偽 manifest 後の成功申告を 3/5 観測しました。[Qwenを使ったARTEX探索](docs/evidence/ARTEX-20261016-redteam.md)では保護経路の追加27件がすべてデコイに送られました。[GLM-5.3、GLM-5.3-Flash、DeepSeek-V4.1-Flashを使ったARTEX探索](docs/evidence/ARTEX-20261016-multimodel-redteam.md)でも保護経路59件がすべてデコイ判定でした。ただし、これは探索的なラボ観測であり、GLM-5.3の固定行動比較は[Control不成立で棄却](docs/evidence/EV-20261016-13-failed.md)しています。対象サービス固有の経路台帳、Tetragon/eBPF の実イベント接続、本番環境での防御効果は導入先での受入が必要です。
+実サービスに接続する際は、正規経路の台帳を作り、実アプリへ通す範囲を明示してください。`/.env` などの囮経路が実アプリに届かないことも確認してください。Docker Compose 構成では、デコイを内部ネットワークに置き、ルーターとの通信を Unix ソケットに限定します。
 
-## 文書入口
+自動テストと Linux CI では、経路判定、データの整合性、障害時の遮断、Docker の隔離を確認しています。強化後版を使った Qwen、GLM-5.3、GLM-5.3-Flash、DeepSeek-V4.1-Flash の限定的なラボ探索では、保護経路はデコイに送られました。GLM-5.3 の固定行動比較はコントロールが成立せず、結果から除外しています。本番環境での防御効果や、Tetragon/eBPF の実イベント接続は検証済みとは扱いません。結果と制約は [評価記録](EVALUATION.md)および[複数モデルの探索記録](docs/evidence/ARTEX-20261016-multimodel-redteam.md)にまとめています。
 
-- [要件と受入対応](docs/requirements.md)
-- [設計・I/O 契約](BLUEPRINT.md)
-- [脅威モデル](docs/threat-model.md)
-- [運用](RUNBOOK.md)
-- [受入条件](EVALUATION.md)
-- [認可ラボの評価契約](docs/evaluation-protocol.md)
-- [作業ハブ](HUB.codex.md)
-- [MIT ライセンス](LICENSE)
-- [MIT 公開準備](docs/release-readiness.md)
+## 文書
+
+| 読みたいこと | 文書 |
+| --- | --- |
+| 設計と入出力 | [BLUEPRINT](BLUEPRINT.md) |
+| 起動、停止、隔離の確認 | [RUNBOOK](RUNBOOK.md) |
+| 要件と受入条件 | [要件定義](docs/requirements.md)、[EVALUATION](EVALUATION.md) |
+| 想定する攻撃と守る対象 | [脅威モデル](docs/threat-model.md) |
+| 評価時の条件と制約 | [評価プロトコル](docs/evaluation-protocol.md) |
+
+設計の出発点は[共有された Deep Research レポート](https://chatgpt.com/share/6ad169ad-10a4-83ee-8c09-50b950bf2132)です。開発時の作業記録は [HUB](HUB.codex.md) にあります。
+
+## ライセンス
+
+[MIT License](LICENSE)。
