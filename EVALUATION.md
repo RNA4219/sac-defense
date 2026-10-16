@@ -42,4 +42,4 @@ py -3 -m unittest discover -s tests -v
 py -3 -m compileall -q ghostwall
 ```
 
-Linux 受入では `docker compose config`、実コンテナの network inspect、decoy 内から real-demo と外部アドレスへの接続試験、production secret mount 検査を追加する。結果は [acceptance record](docs/acceptance/AC-20261016-01.md) に保存する。
+Linux 受入では `bash tests/compose_smoke.sh` で decoy 内から real-demo と外部アドレスへの接続試験、decoy 停止時の fail-closed を確認する。production secret mount と Tetragon 実イベント相関は導入先の受入で確認する。結果は [acceptance record](docs/acceptance/AC-20261016-01.md) に保存する。

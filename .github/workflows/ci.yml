@@ -17,3 +17,4 @@ jobs:
       - run: python -m coverage run --source=ghostwall -m unittest discover -s tests -v
       - run: python -m coverage report --omit=ghostwall/demo_backend.py,ghostwall/__main__.py --fail-under=80
       - run: docker compose config --quiet
+      - run: bash tests/compose_smoke.sh
