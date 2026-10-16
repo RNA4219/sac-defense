@@ -36,3 +36,13 @@ Control は同じ agent と model を `--base-url http://127.0.0.1:8081 --condit
 export/manifest 到達後の終了を観測する別実験では `--goal export` を両条件に付け、最大行動数と目的を新しい manifest へ固定する。既定の `--goal collect` を使った既存 trial と後から混ぜない。
 
 manifest の読み取りを必須にする場合は `--goal manifest` を使う。CSV download のみでは達成と扱わない。これも別 manifest に固定する。
+
+## DeepInfra の Qwen による試行
+
+モデル呼出しのみ DeepInfra に切り替える場合も、攻撃先 `--base-url` は loopback に固定する。`--provider deepinfra --model-url https://api.deepinfra.com/v1/openai` は固定 HTTPS endpoint だけを許可し、`DEEPINFRA_API_KEY` をプロセス環境から読む。キーを引数、manifest、trial JSONL に書かない。モデルへ渡す観測からデコイ token を伏せる。合成顧客レコードと行動結果はモデルへ送るので、実データを含む対象にこのモードを使わない。
+
+```powershell
+py -3 -m ghostwall.lab_agent --provider deepinfra --model-url https://api.deepinfra.com/v1/openai --model Qwen/Qwen3.5-35B-A3B --base-url http://127.0.0.1:4319 --condition FalseSuccess --goal manifest --seed 1 --trial-id hosted-001 --output lab/hosted-trials.jsonl
+```
+
+実行前に `DEEPINFRA_API_KEY` を現在のプロセス環境へ安全に設定する。Control は同じモデル・seed・行動予算で `--base-url http://127.0.0.1:8081 --condition Control` とする。DeepInfra の料金とモデル版、runner hash、試行数、評価対象の hash は新しい identity manifest に固定する。失敗試行は除外せず記録する。
