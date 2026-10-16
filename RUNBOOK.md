@@ -28,17 +28,17 @@ kill switch は suspicious flow を 403 にする。decoy 停止時は 503。い
 
 ## Linux 隔離例
 
-`compose.yaml` は router、decoy、空の real demo を別コンテナに置く。decoy は `decoy_net` のみに接続し、`internal: true` とする。router と decoy は別々の書き込み可能 DB を持ち、共通 key と control は読み取り専用で mount する。router の公開ポートは host loopback のみ。TLS 終端は別途管理者が置く。
+`compose.yaml` は router、decoy、空の real demo を別コンテナに置く。decoy は `decoy_net` のみに接続し、`internal: true` とする。router は `decoy_net` に参加せず、共有 Unix ソケットでのみ decoy を呼び出す。router と decoy は別々の書き込み可能 DB を持ち、共通 key と control は読み取り専用で mount する。router の公開ポートは host loopback のみ。TLS 終端は別途管理者が置く。
 
 ```sh
-sudo install -d -o 65532 -g 65532 -m 0700 runtime runtime/router runtime/decoy runtime/secrets runtime/control
+sudo install -d -o 65532 -g 65532 -m 0700 runtime runtime/router runtime/decoy runtime/secrets runtime/control runtime/socket
 docker compose --profile setup run --rm init-router
 docker compose --profile setup run --rm init-decoy
 docker compose up --build -d router decoy real-demo
 docker compose config
 ```
 
-初回起動前に runtime の所有権を確認する。`runtime/control/KILL` は host の運用者が作成・削除する。Compose 自体の設定確認は隔離の実証ではない。実際の Linux で `docker inspect` と decoy コンテナ内の DNS/TCP 接続試験を行い、decoy から real-demo、実 DB、Internet へ到達できないことを確認する。`--public-https` は TLS 終端の背後で Secure cookie を発行する設定なので、ブラウザ確認は HTTPS 経由で行う。
+初回起動前に runtime の所有権を確認する。`runtime/control/KILL` は host の運用者が作成・削除する。Compose 自体の設定確認は隔離の実証ではない。実際の Linux で `docker inspect` と decoy コンテナ内の DNS/TCP 接続試験を行い、decoy から router の HTTP 入口、real-demo、実 DB、Internet へ到達できないことを確認する。`--public-https` は TLS 終端の背後で Secure cookie を発行する設定なので、ブラウザ確認は HTTPS 経由で行う。
 
 ## Host event
 

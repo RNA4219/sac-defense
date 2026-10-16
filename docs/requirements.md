@@ -13,7 +13,7 @@
 | FR-G | export と manifest の偽完了 | CSV hash、count、job ID。TC-F |
 | FR-H | request / route / state / host event の session 相関 | SQLite `events`, `host_signals`。host source の相関は導入先で実証 |
 | FR-I | 即時 kill switch | file 有無を request ごとに検査。TC-I |
-| FR-J | decoy 隔離 | `compose.yaml` の内部 network と router/decoy 別 DB、読み取り専用 key/control mount。Linux 実環境で TC-G |
+| FR-J | decoy 隔離 | `compose.yaml` の分離 network、Unix ソケット連携、router/decoy 別 DB、読み取り専用 key/control mount。decoy→router HTTP 入口の迂回も Linux 実環境で TC-G |
 
 ## 非機能要件
 

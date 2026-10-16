@@ -38,7 +38,7 @@ services:
       - --upstream
       - http://real-demo:8080
       - --decoy
-      - http://decoy:4320
+      - unix:/socket/decoy.sock
       - --public-https
       - --never-real-prefix
       - /api/private
@@ -54,9 +54,10 @@ services:
       - ./runtime/router:/state
       - ./runtime/secrets/deployment.key:/secrets/deployment.key:ro
       - ./runtime/control:/control:ro
+      - ./runtime/socket:/socket:ro
     ports:
       - 127.0.0.1:4319:4319
-    networks: [front_net, prod_net, decoy_net]
+    networks: [front_net, prod_net]
     depends_on: [decoy, real-demo]
 
   decoy:
@@ -71,10 +72,8 @@ services:
       - /secrets/deployment.key
       - --kill-switch
       - /control/KILL
-      - --bind
-      - 0.0.0.0
-      - --port
-      - "4320"
+      - --unix-socket
+      - /socket/decoy.sock
     user: "65532:65532"
     read_only: true
     cap_drop: [ALL]
@@ -85,6 +84,7 @@ services:
       - ./runtime/decoy:/state
       - ./runtime/secrets/deployment.key:/secrets/deployment.key:ro
       - ./runtime/control:/control:ro
+      - ./runtime/socket:/socket
     networks: [decoy_net]
 
   real-demo:

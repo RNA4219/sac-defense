@@ -7,6 +7,7 @@ import json
 import posixpath
 import re
 import socket
+import socketserver
 import sqlite3
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -91,6 +92,17 @@ class App:
         self.key = load_key(settings.key_file)
         self.store = Store(settings.database, self.key)
         self.store.initialize()
+
+
+class UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, path: str) -> None:
+        super().__init__("localhost", timeout=3)
+        self.path = path
+
+    def connect(self) -> None:
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.settimeout(self.timeout)
+        self.sock.connect(self.path)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -226,8 +238,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _proxy(self, origin: str, target: str, body: bytes, signed: str, to_decoy: bool, has_token: bool) -> None:
         parsed = urlsplit(origin)
-        connection_type = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
-        connection = connection_type(parsed.hostname, parsed.port, timeout=3)
+        if parsed.scheme == "unix":
+            connection = UnixHTTPConnection(parsed.path)
+        else:
+            connection_type = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+            connection = connection_type(parsed.hostname, parsed.port, timeout=3)
         headers: dict[str, str] = {}
         connection_tokens = {token.strip().lower() for token in self.headers.get("Connection", "").split(",")}
         for name, value in self.headers.items():
@@ -389,3 +404,31 @@ class Server(ThreadingHTTPServer):
             super().process_request_thread(request, client_address)
         finally:
             self._slots.release()
+
+
+class UnixServer(Server):
+    address_family = getattr(socket, "AF_UNIX", -1)
+
+    def __init__(self, app: App) -> None:
+        path = app.settings.unix_socket
+        if path is None:
+            raise ValueError("Unix socket path required")
+        if path.exists():
+            if not path.is_socket():
+                raise ValueError("Unix socket path is occupied")
+            path.unlink()
+        self._socket_path = path
+        self._slots = threading.BoundedSemaphore(64)
+        socketserver.TCPServer.__init__(self, str(path), Handler, bind_and_activate=False)
+        self.app = app
+        self.server_bind()
+        self.server_activate()
+
+    def server_bind(self) -> None:
+        socketserver.TCPServer.server_bind(self)
+
+    def server_close(self) -> None:
+        try:
+            super().server_close()
+        finally:
+            self._socket_path.unlink(missing_ok=True)

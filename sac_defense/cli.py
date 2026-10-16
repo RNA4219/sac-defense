@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .core import Settings, load_key, new_key, parse_session
 from .evaluation import read_trials, summarize_trials
-from .server import App, Server
+from .server import App, Server, UnixServer
 from .store import Store
 
 
@@ -32,6 +32,7 @@ def parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=4319)
     serve.add_argument("--upstream", default="")
     serve.add_argument("--decoy", default="")
+    serve.add_argument("--unix-socket", type=Path, help="decoy listener path instead of TCP")
     serve.add_argument("--public-https", action="store_true")
     serve.add_argument("--never-real-prefix", action="append", default=[],
                        help="canonical path prefix that must never reach the real upstream")
@@ -89,11 +90,12 @@ def main(argv: list[str] | None = None) -> int:
                 mode=args.mode,
                 upstream=args.upstream,
                 decoy=args.decoy,
+                unix_socket=args.unix_socket,
                 public_https=args.public_https,
                 never_real_prefixes=tuple(args.never_real_prefix),
                 allow_real_prefixes=tuple(args.allow_real_prefix),
             )
-            server = Server(App(settings))
+            server = UnixServer(App(settings)) if settings.unix_socket else Server(App(settings))
             print(json.dumps({"status": "listening", "mode": args.mode, "bind": args.bind, "port": args.port}), flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)

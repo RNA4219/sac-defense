@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import os
 import re
+import socket
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +29,7 @@ class Settings:
     mode: str = "router"
     upstream: str = ""
     decoy: str = ""
+    unix_socket: Path | None = None
     public_https: bool = False
     never_real_prefixes: tuple[str, ...] = ()
     allow_real_prefixes: tuple[str, ...] = ()
@@ -39,10 +41,18 @@ class Settings:
             raise ValueError("invalid port")
         if self.mode == "router" and self.bind not in {"127.0.0.1", "::1", "localhost"} and not self.public_https:
             raise ValueError("non-loopback binding requires public_https behind a TLS proxy")
-        for value in (self.upstream, self.decoy):
+        if self.unix_socket is not None:
+            if self.mode != "decoy" or not self.unix_socket.is_absolute() or ".." in self.unix_socket.parts:
+                raise ValueError("only decoy mode accepts an absolute Unix socket path")
+        for value, is_decoy in ((self.upstream, False), (self.decoy, True)):
             if not value:
                 continue
             parsed = urlsplit(value)
+            if is_decoy and parsed.scheme == "unix":
+                if (parsed.netloc or not parsed.path.startswith("/") or ".." in Path(parsed.path).parts
+                        or parsed.query or parsed.fragment or not hasattr(socket, "AF_UNIX")):
+                    raise ValueError("decoy Unix socket must be an absolute path")
+                continue
             if parsed.scheme not in {"http", "https"} or not parsed.hostname:
                 raise ValueError("upstream and decoy must be absolute HTTP URLs")
             if parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:

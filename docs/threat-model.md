@@ -13,8 +13,9 @@
 1. decoy へ触れた後も real 側を再探索する。署名済み sticky session、`--never-real-prefix` で指定した機密経路の上流到達禁止、`--allow-real-prefix` による real 経路の明示、独立した real 側の防御を使い、lab で再探索率を測る。
 2. decoy の顧客・注文・件数に矛盾が出る。データ生成はコードと SQLite に固定し、外部キーと CSV hash を試験する。
 3. decoy 停止時に real 側へ流れる。router は 503/403 へ閉じる。
-4. decoy を踏み台にする。ネットワーク、volume、権限を分離し、Internet egress を閉じる。
-5. 良性利用者が誤誘導される。sentinel と decoy token、署名済み session、信頼された host signal のみを route 判定に使う。誤誘導率は lab で測る。
+4. decoy が router の HTTP 入口を経由して real の許可経路へ戻る。隔離 Compose では router と decoy の Docker network を共有せず、router から decoy への呼出しだけを共有 Unix ソケットへ限定する。decoy から router への TCP 到達失敗を受入試験で確認する。
+5. decoy を踏み台にする。ネットワーク、volume、権限を分離し、Internet egress を閉じる。
+6. 良性利用者が誤誘導される。sentinel と decoy token、署名済み session、信頼された host signal のみを route 判定に使う。誤誘導率は lab で測る。
 
 ## 信頼の限界
 

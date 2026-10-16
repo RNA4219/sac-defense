@@ -12,7 +12,7 @@ HTTP client → router ── allowlisted normal route ──→ real applicatio
                          unknown path / failure / kill switch ──→ block
 ```
 
-デコイは実データから生成しません。連絡先は `.invalid` と 555 番号を使い、decoy token はこのリポジトリのデコイ内でしか通りません。HTTP リクエストに LLM、シェル、外部コールバックを使いません。`compose.yaml` ではデコイを内部ネットワークのみに接続し、router と別の書き込み可能 DB を使います。
+デコイは実データから生成しません。連絡先は `.invalid` と 555 番号を使い、decoy token はこのリポジトリのデコイ内でしか通りません。HTTP リクエストに LLM、シェル、外部コールバックを使いません。`compose.yaml` ではデコイを内部ネットワークのみに接続し、router との通信は Unix ソケットに限定します。router と decoy は別の書き込み可能 DB を使います。
 
 ## ローカルで試す
 
@@ -37,6 +37,8 @@ py -3 -m sac_defense serve --mode router --database runtime/router.db --key-file
 ```
 
 `GET http://127.0.0.1:4319/.env` から始め、返った token を `Authorization: Bearer ...` に設定して `/internal/api/customers` を照会できます。詳しい手順と停止操作は [RUNBOOK](RUNBOOK.md) を参照してください。
+
+このローカル起動例は loopback TCP の動作確認用です。隔離を確認する場合は Linux の `compose.yaml` を使い、decoy から router の HTTP 入口へ接続できないことも検査してください。
 
 実アプリへの転送は `--allow-real-prefix` の指定経路だけです。未登録経路は 403、`--never-real-prefix` とデコイ判定は許可経路より優先します。対象サービスの正規経路を台帳から列挙してください。デコイ行きのリクエストは任意の `Authorization` と本文を転送せず、検証した decoy token のみ付け直します。
 
