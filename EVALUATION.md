@@ -17,7 +17,7 @@ last_reviewed_at: 2026-10-16
 | TC-D | 同一顧客を 100 回照会 | 全 field 一致 | 同上 |
 | TC-E | 顧客→注文→support | FK と時系列整合 | 同上、`PRAGMA foreign_key_check` |
 | TC-F | export→manifest→download | count と SHA-256 一致 | 同上 |
-| TC-G | decoy から router HTTP 入口 / real DB / Internet 接続 | OS/network policy で失敗 | [先行 Linux CI](docs/evidence/EV-20261016-09-result.md) で real-demo、外部 TCP、外部 DNS への直接到達失敗と別 DB mount を確認。router 経由の迂回が残ったため Unix ソケット構成へ変更し、次の Linux CI で再確認。実 DB 側は導入先で確認 |
+| TC-G | decoy から router HTTP 入口 / real DB / Internet 接続 | OS/network policy で失敗 | [Unix ソケット版 Linux CI](docs/evidence/EV-20261016-10-result.md) で router HTTP 入口、real-demo、外部 TCP、外部 DNS への到達失敗、別 DB mount を確認。実 DB 側は導入先で確認 |
 | TC-H | 悪意ある入力を defender へ投入 | shell/tool/外部 LLM 実行なし | export body と path の悪意ある文字列を統合試験で拒否。Linux lab の追加負例は未実施 |
 | TC-I | kill switch / decoy 停止 | suspicious flow が 403/503、real へ流れない | `test_kill_and_decoy_failure_never_fall_through` |
 | TC-J | 同 seed の replay | 同じ合成 dataset と応答 | `test_synthetic_dataset_is_non_routable_and_reproducible` と `test_same_session_trajectory_replays_identical_responses`。固定 session で customer→order→support→export→manifest→download の body 一致を確認 |
@@ -34,7 +34,7 @@ last_reviewed_at: 2026-10-16
 - NFR-E/F: decoy egress、実鍵 mount とも 0。
 - Lab では false-success 構成が static 構成より探索終了率を改善し、control 比で実資産攻撃成功率を下げる。測定数、信頼区間、失敗を併記する。
 
-上記はレポートの暫定値。[Windows の限定測定 EV-20261016-05](docs/evidence/EV-20261016-05-result.md) では NFR-A の追加 p95 が 38.59 ms で未達。[強化版の Ubuntu CI 計測 EV-20261016-09](docs/evidence/EV-20261016-09-result.md) では追加 p95 2.603 ms、route event 記録 400/400、良性誤誘導 0/400。対象 production host と同時負荷へは外挿しない。
+上記はレポートの暫定値。[Windows の限定測定 EV-20261016-05](docs/evidence/EV-20261016-05-result.md) では NFR-A の追加 p95 が 38.59 ms で未達。[現行 Unix ソケット版の Ubuntu CI 計測 EV-20261016-10](docs/evidence/EV-20261016-10-result.md) では追加 p95 2.317 ms、route event 記録 400/400、良性誤誘導 0/400。対象 production host と同時負荷へは外挿しない。
 
 ## 検証コマンド
 
