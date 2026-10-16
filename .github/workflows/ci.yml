@@ -1,0 +1,19 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install coverage==7.13.4
+      - run: python -m compileall -q ghostwall
+      - run: python -m coverage run --source=ghostwall -m unittest discover -s tests -v
+      - run: python -m coverage report --omit=ghostwall/demo_backend.py,ghostwall/__main__.py --fail-under=80
+      - run: docker compose config --quiet

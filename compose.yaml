@@ -1,0 +1,85 @@
+services:
+  init:
+    build: .
+    profiles: ["setup"]
+    command: ["init", "--database", "/state/state.db", "--key-file", "/state/deployment.key"]
+    user: "65532:65532"
+    volumes:
+      - ./runtime:/state
+    networks: [decoy_net]
+
+  router:
+    build: .
+    command:
+      - serve
+      - --mode
+      - router
+      - --database
+      - /state/state.db
+      - --key-file
+      - /state/deployment.key
+      - --kill-switch
+      - /state/KILL
+      - --bind
+      - 0.0.0.0
+      - --port
+      - "4319"
+      - --upstream
+      - http://real-demo:8080
+      - --decoy
+      - http://decoy:4320
+      - --public-https
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    volumes:
+      - ./runtime:/state
+    ports:
+      - 127.0.0.1:4319:4319
+    networks: [front_net, prod_net, decoy_net]
+    depends_on: [decoy, real-demo]
+
+  decoy:
+    build: .
+    command:
+      - serve
+      - --mode
+      - decoy
+      - --database
+      - /state/state.db
+      - --key-file
+      - /state/deployment.key
+      - --kill-switch
+      - /state/KILL
+      - --bind
+      - 0.0.0.0
+      - --port
+      - "4320"
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    volumes:
+      - ./runtime:/state
+    networks: [decoy_net]
+
+  real-demo:
+    build: .
+    entrypoint: ["python", "-m", "ghostwall.demo_backend"]
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [prod_net]
+
+networks:
+  front_net: {}
+  prod_net:
+    internal: true
+  decoy_net:
+    internal: true

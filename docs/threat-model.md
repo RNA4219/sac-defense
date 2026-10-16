@@ -1,0 +1,21 @@
+# 脅威モデル
+
+## 保護対象
+
+実アプリ・実DB・実credential と、正常利用者の到達経路を保護する。デコイ SQLite と token は偽資産であり、実アプリから参照しない。
+
+## 攻撃者と境界
+
+主対象は HTTP の応答を LLM コンテキストへ取り込み、次の行動を決める自律型探索エージェント。固定 scanner や exploit-only automation には通常の WAF/IPS が別途必要。攻撃者は path、query、header、body、cookie を制御できる。router の固定 origin、deployment key、host event file、kill switch は運用者だけが制御する。
+
+## 主要な失敗
+
+1. decoy へ触れた後も real 側を再探索する。署名済み sticky session と独立した real 側の防御を使い、lab で再探索率を測る。
+2. decoy の顧客・注文・件数に矛盾が出る。データ生成はコードと SQLite に固定し、外部キーと CSV hash を試験する。
+3. decoy 停止時に real 側へ流れる。router は 503/403 へ閉じる。
+4. decoy を踏み台にする。ネットワーク、volume、権限を分離し、Internet egress を閉じる。
+5. 良性利用者が誤誘導される。sentinel と decoy token、署名済み session、信頼された host signal のみを route 判定に使う。誤誘導率は lab で測る。
+
+## 信頼の限界
+
+署名 cookie は同一 client 内の sticky route 用であり、攻撃者個人の識別ではない。攻撃者が cookie を削除・変更して新しい session として real 側へ再接続する可能性がある。そのため router の欺瞞だけを実資産保護の保証とせず、real 側の認証・WAF/IPS・host policy を独立して維持する。host event は信頼された外部相関器が session cookie と対応付けた場合だけ取り込める。eBPF event 単体から HTTP session ID を確実に特定できるとは主張しない。

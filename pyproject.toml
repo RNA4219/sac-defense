@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghostwall-nine"
+version = "0.1.0"
+description = "Stateful defensive deception for authorized HTTP services"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[project.scripts]
+ghostwall = "ghostwall.cli:main"
+
+[tool.setuptools]
+packages = ["ghostwall"]
