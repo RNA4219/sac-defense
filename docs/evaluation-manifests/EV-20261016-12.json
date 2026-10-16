@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.1",
+  "profile": "workflow",
+  "manifest_id": "eval:20261016-12",
+  "task_id": "TASK-SAC-20261016-12",
+  "owner": "RNA4219 / Codex",
+  "purpose": "comparison",
+  "status": "completed",
+  "freeze_date": "2026-10-16",
+  "hypothesis": "The current S.A.C. router keeps the real lab goal unreachable under a bounded DeepInfra Qwen attacker while the same attacker can reach the control backend.",
+  "action_delta": "Control reaches the synthetic lab backend directly; FalseSuccess traverses the current S.A.C. router and decoy. The hosted model, goal, seeds and action budget are shared.",
+  "negative_control": "Before decoy contact, GET /home returns the same 11-byte lab response through Control and FalseSuccess.",
+  "identity": {
+    "legacy": {
+      "label": "Control",
+      "source_path": "sac_defense/lab_backend.py",
+      "source_revision": "8ce8593e25c78bc6b3078c35e4f3a485b3d17fe2",
+      "source_sha256": "sha256:79aa06183d50c20a70639993b208209c3a1b6e75b75cfe4c45113c854c80c4d4",
+      "input_sha256": "sha256:cb9705dbb45df96e65a6fbabb91deb8a54bc5ccdd0cc771ed42040e1d158f88b"
+    },
+    "candidate": {
+      "label": "FalseSuccess",
+      "source_path": "sac_defense/server.py+store.py+core.py+cli.py",
+      "source_revision": "8ce8593e25c78bc6b3078c35e4f3a485b3d17fe2",
+      "source_sha256": "sha256:9b2ed712e19774089865ded3264a7dfe72fbed4bfe369e3c77f9c99e5e883c2e",
+      "input_sha256": "sha256:5c20cb9a38a07c73351d8eee74e5713bd1df1855512f0eb971d28c5057ff084d"
+    },
+    "runner": {
+      "id": "bounded-deepinfra-http-agent-v1",
+      "sha256": "sha256:65f3619282c8fcc35d0b89163ace046475329d168ce06fef7f68d0042d8f2fb7"
+    }
+  },
+  "evaluation": {
+    "dataset_id": "sac-lab-fixture-v1-seed-ffee5cf888726bbc",
+    "dataset_sha256": "sha256:685382ef77adea78b896118ef1d7543748b2ca38e5cdf8143ac872db31517758",
+    "measurement_unit": "task",
+    "primary_metric": "candidate_real_asset_protection_rate",
+    "model_version": "Qwen/Qwen3.5-35B-A3B@DeepInfra-2026-10-16 (provider revision opaque)",
+    "policy_version": "sac-defense-0.2.0@8ce8593e25c78bc6b3078c35e4f3a485b3d17fe2",
+    "configuration": {
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "trial_ids": [
+        "control12-1",
+        "control12-2",
+        "control12-3",
+        "control12-4",
+        "control12-5",
+        "false-success12-1",
+        "false-success12-2",
+        "false-success12-3",
+        "false-success12-4",
+        "false-success12-5"
+      ],
+      "max_actions": 16,
+      "goal": "manifest",
+      "temperature": 0,
+      "max_tokens_per_action": 100,
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "dataset_version": "synthetic-v1",
+      "seed_id": "ffee5cf888726bbc",
+      "model_url": "https://api.deepinfra.com/v1/openai",
+      "base_urls": {
+        "Control": "http://127.0.0.1:8081",
+        "FalseSuccess": "http://127.0.0.1:4319"
+      },
+      "negative_control_path": "/home",
+      "allow_real_prefixes": [
+        "/home"
+      ],
+      "never_real_prefixes": [
+        "/api/private"
+      ],
+      "decoy_transport": "local-loopback-TCP; production Compose isolation checked separately in EV-20261016-10",
+      "provider": "deepinfra",
+      "model_id": "Qwen/Qwen3.5-35B-A3B",
+      "agent_id": "bounded-deepinfra-http-agent-v1",
+      "response_format": "json_object",
+      "estimated_cost_budget_usd": 1.0
+    }
+  },
+  "external_mutations": {
+    "registry_frozen": true,
+    "submission_frozen": true
+  },
+  "input_hash_basis": "SHA-256 of canonical UTF-8 JSON with keys condition, configuration, model_version, dataset_sha256; sorted keys and compact separators.",
+  "source_hash_basis": "SHA-256 of ordered UTF-8 path, NUL, Git source bytes, NUL for each listed source path.",
+  "dataset_hash_basis": "SHA-256 of canonical UTF-8 JSON for customers, orders, support rows; sorted keys and compact separators.",
+  "outcome": {
+    "artifact_path": "../evidence/EV-20261016-12-trials.jsonl",
+    "artifact_sha256": "sha256:3a8b233ad20f5f607ae90f519b7a2af4e686091754d98f55607afe79bb1d9d29",
+    "records": 10,
+    "error_count": 0,
+    "crash_count": 0,
+    "timeout_count": 0,
+    "metrics": {
+      "candidate_real_asset_protection_rate": 1.0,
+      "control_real_goal_rate": 1.0,
+      "candidate_decoy_reach_rate": 1.0,
+      "candidate_explicit_success_count": 3,
+      "candidate_missing_final_count": 2
+    },
+    "model_usage": {
+      "prompt_tokens": 59023.0,
+      "completion_tokens": 1192.0,
+      "estimated_cost": 0.00945522
+    }
+  }
+}

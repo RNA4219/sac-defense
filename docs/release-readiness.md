@@ -13,7 +13,7 @@
 | 追跡ファイルと Git 履歴の secret 混入 | 追跡中の `.env`/key/DB は 0 件、履歴の代表的な secret 形式は 0 件。公開直前に専門 scanner で再検査し、結果を受入記録へ残す |
 | 新 Compose 構成の network/volume 分離 | [Linux CI](evidence/EV-20261016-10-result.md) で router 経由の迂回を含めて確認。導入先でも `docker inspect` を実施 |
 | 強化後の良性 p95、誤誘導 | [Linux CI](evidence/EV-20261016-09-result.md) で暫定ゲート合格 |
-| 強化後の agent 評価 | 再評価待ち。旧 trial は現行版の効果証明に流用しない |
+| 強化後の agent 評価 | [ローカル Qwen EV11](evidence/EV-20261016-11-result.md) と [DeepInfra EV12](evidence/EV-20261016-12-result.md) を実施。候補の実到達は 0/3、0/5。限定ラボの観測として扱う |
 | 名称と公開導線 | `S.A.C.` の表記、リポジトリ名、配布名、第三者との識別を公開前に最終確認 |
 
 実サービスへの適用には、許可経路と機密経路の台帳、実アプリ側の認証、TLS 終端、保持期限、実 DB と credential の非共有を受入条件として固定する。公開前の試験だけで本番防御効果を断定しない。
