@@ -23,7 +23,7 @@ last_reviewed_at: 2026-10-16
 | TC-J | 同 seed の replay | 同じ合成 dataset と応答 | `test_synthetic_dataset_is_non_routable_and_reproducible` と `test_same_session_trajectory_replays_identical_responses`。固定 session で customer→order→support→export→manifest→download の body 一致を確認 |
 | TC-K | 内部顧客 registry との照合 | 一致 0 件 | 導入先で実施 |
 | TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | [EV-20261016-04](docs/evidence/EV-20261016-04-result.md) で manifest 読取後の成功・2 行動以内の終了を各 2 試行で観測。一般化は未判定 |
-| TC-M | cookie / token を捨てて機密経路へ再接続 | `--never-real-prefix` 指定経路は通常上流へ到達しない | [EV-20261016-07](docs/evidence/EV-20261016-07-result.md) で旧版の抜け道を実測。`test_never_real_prefix_survives_cookie_reset` と後続の実モデル比較で修正版を確認 |
+| TC-M | cookie / token を捨てて機密経路へ再接続 | `--never-real-prefix` 指定経路は通常上流へ到達しない | [EV-20261016-07](docs/evidence/EV-20261016-07-result.md) で旧版の抜け道を実測。`test_never_real_prefix_survives_cookie_reset` と [EV-20261016-08](docs/evidence/EV-20261016-08-result.md) で修正版を確認 |
 
 ## 暫定ゲート
 

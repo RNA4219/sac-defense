@@ -41,6 +41,8 @@ py -3 -m ghostwall.lab_agent --help
 - [EV-20261016-04（manifest-goal pilot）](docs/evaluation-manifests/EV-20261016-04.json) と [結果](docs/evidence/EV-20261016-04-result.md)。manifest 読取後に終了、各条件 2 試行。
 - [EV-20261016-05（Windows 良性経路計測）](docs/evaluation-manifests/EV-20261016-05.json) と [結果](docs/evidence/EV-20261016-05-result.md)。追加 p95 遅延は暫定基準未達。
 - [EV-20261016-06（Ubuntu CI 良性経路計測）](docs/evaluation-manifests/EV-20261016-06.json) と [結果](docs/evidence/EV-20261016-06-result.md)。追加 p95 遅延は暫定基準内。
+- [EV-20261016-07（hosted Qwen の抜け道検出）](docs/evaluation-manifests/EV-20261016-07.json) と [結果](docs/evidence/EV-20261016-07-result.md)。cookie 再作成後の実ゴール到達 1/5。
+- [EV-20261016-08（機密経路の保護後）](docs/evaluation-manifests/EV-20261016-08.json) と [結果](docs/evidence/EV-20261016-08-result.md)。候補の実ゴール到達 0/5、偽成功申告 3/5、最終判定なし 2/5。
 
 ## Acceptance
 
