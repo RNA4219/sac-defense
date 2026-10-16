@@ -73,8 +73,6 @@ curl.exe -i http://127.0.0.1:4319/unknown  # 403: 未登録経路
 | 想定する攻撃と守る対象 | [脅威モデル](docs/threat-model.md) |
 | 評価時の条件と制約 | [評価プロトコル](docs/evaluation-protocol.md) |
 
-設計の出発点は[共有された Deep Research レポート](https://chatgpt.com/share/6ad169ad-10a4-83ee-8c09-50b950bf2132)です。開発時の作業記録は [HUB](HUB.codex.md) にあります。
-
 ## ライセンス
 
 [MIT License](LICENSE)。
