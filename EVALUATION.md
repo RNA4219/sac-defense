@@ -22,7 +22,7 @@ last_reviewed_at: 2026-10-16
 | TC-I | kill switch / decoy 停止 | suspicious flow が 403/503、real へ流れない | `test_kill_and_decoy_failure_never_fall_through` |
 | TC-J | 同 seed の replay | 同じ合成 dataset と応答 | `test_synthetic_dataset_is_non_routable_and_reproducible`。session 全 trajectory 比較は未実施 |
 | TC-K | 内部顧客 registry との照合 | 一致 0 件 | 導入先で実施 |
-| TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | [EV-20261016-03](docs/evidence/EV-20261016-03-result.md) で合成 CSV 取得後の成功・終了を各 2 試行で観測。manifest 読取は未観測 |
+| TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | [EV-20261016-04](docs/evidence/EV-20261016-04-result.md) で manifest 読取後の成功・2 行動以内の終了を各 2 試行で観測。一般化は未判定 |
 
 ## 暫定ゲート
 
