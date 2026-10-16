@@ -19,8 +19,9 @@ HTTP client → router ── allowlisted normal route ──→ real applicatio
 Python 3.11 以降を使用します。
 
 ```powershell
-py -3 -m sac_defense init --database runtime/state.db --key-file runtime/deployment.key
-py -3 -m sac_defense serve --mode decoy --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
+py -3 -m sac_defense init --database runtime/router.db --key-file runtime/deployment.key
+py -3 -m sac_defense init --database runtime/decoy.db --key-file runtime/deployment.key --reuse-key
+py -3 -m sac_defense serve --mode decoy --database runtime/decoy.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
 ```
 
 別の端末で、実アプリ役を起動します。
@@ -32,7 +33,7 @@ py -3 -m sac_defense.demo_backend
 さらに別の端末で router を起動します。
 
 ```powershell
-py -3 -m sac_defense serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8080 --decoy http://127.0.0.1:4320 --allow-real-prefix /home --never-real-prefix /api/private
+py -3 -m sac_defense serve --mode router --database runtime/router.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8080 --decoy http://127.0.0.1:4320 --allow-real-prefix /home --never-real-prefix /api/private
 ```
 
 `GET http://127.0.0.1:4319/.env` から始め、返った token を `Authorization: Bearer ...` に設定して `/internal/api/customers` を照会できます。詳しい手順と停止操作は [RUNBOOK](RUNBOOK.md) を参照してください。
@@ -41,7 +42,7 @@ py -3 -m sac_defense serve --mode router --database runtime/state.db --key-file 
 
 ## 現時点の検証境界
 
-自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。旧構成の Linux Docker 分離と decoy 停止時の fail-closed は GitHub CI で確認済みです。[Qwen3.5 4B の限定 pilot](docs/evidence/EV-20261016-04-result.md) では合成 manifest 読取後の成功申告と探索終了を観測しました。[DeepInfra Qwen の追加評価](docs/evidence/EV-20261016-07-result.md) では cookie 再作成による抜け道を検出しました。`--never-real-prefix` を追加した[再評価](docs/evidence/EV-20261016-08-result.md)では、候補 5 試行の実ゴール到達が 0 件でした。今回の強化後の agent 再評価と Docker 分離試験は別途実行が必要です。対象サービス固有の経路台帳、Tetragon/eBPF の実イベント接続、本番環境での防御効果は導入先での受入が必要です。
+自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。[強化版の Linux CI](docs/evidence/EV-20261016-09-result.md) では Docker 分離、decoy 停止時の fail-closed、良性経路 400 組を確認しました。[Qwen3.5 4B の限定 pilot](docs/evidence/EV-20261016-04-result.md) では合成 manifest 読取後の成功申告と探索終了を観測しました。[DeepInfra Qwen の追加評価](docs/evidence/EV-20261016-07-result.md) では cookie 再作成による抜け道を検出しました。`--never-real-prefix` を追加した[再評価](docs/evidence/EV-20261016-08-result.md)では、候補 5 試行の実ゴール到達が 0 件でした。今回の強化後の agent 再評価は未実施です。対象サービス固有の経路台帳、Tetragon/eBPF の実イベント接続、本番環境での防御効果は導入先での受入が必要です。
 
 ## 文書入口
 

@@ -26,8 +26,10 @@ py -3 -m sac_defense evaluate --file lab/trials.jsonl --termination-budget 2
 
 ```powershell
 py -3 -m sac_defense.lab_backend --port 8081
-py -3 -m sac_defense serve --mode decoy --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
-py -3 -m sac_defense serve --mode router --database runtime/state.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320 --allow-real-prefix /home --never-real-prefix /api/private
+py -3 -m sac_defense init --database runtime/router.db --key-file runtime/deployment.key
+py -3 -m sac_defense init --database runtime/decoy.db --key-file runtime/deployment.key --reuse-key
+py -3 -m sac_defense serve --mode decoy --database runtime/decoy.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4320
+py -3 -m sac_defense serve --mode router --database runtime/router.db --key-file runtime/deployment.key --kill-switch runtime/KILL --port 4319 --upstream http://127.0.0.1:8081 --decoy http://127.0.0.1:4320 --allow-real-prefix /home --never-real-prefix /api/private
 py -3 -m sac_defense.lab_agent --base-url http://127.0.0.1:4319 --model-url http://127.0.0.1:8080 --model <model-id> --condition FalseSuccess --seed 1 --trial-id lab-001 --output lab/trials.jsonl
 ```
 

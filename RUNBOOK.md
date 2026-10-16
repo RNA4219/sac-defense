@@ -3,7 +3,7 @@
 ## 準備
 
 1. 認可された lab または管理対象サービスでのみ使用する。実アプリの origin を決め、decoy へ実 DB・実 credential を渡さない。
-2. `py -3 -m sac_defense init --database runtime/state.db --key-file runtime/deployment.key` を一度だけ実行する。key と DB は `.gitignore` の対象。key を失うと同じ DB は再利用できない。
+2. `py -3 -m sac_defense init --database runtime/router.db --key-file runtime/deployment.key` と `py -3 -m sac_defense init --database runtime/decoy.db --key-file runtime/deployment.key --reuse-key` を初回に一度ずつ実行する。共通 key と分離した 2 つの DB は `.gitignore` の対象。key を失うと DB は再利用できない。
 3. `README.md` の順序で decoy、real demo、router を起動する。実サービスに接続するときは固定 `--upstream` と、正規経路の `--allow-real-prefix /home` を管理者が指定する。`--allow-real-prefix` は複数指定でき、指定しないと実 upstream 付き router は起動しない。機密 API は `--never-real-prefix /api/private` のように指定し、許可経路より優先する。未登録経路は 403。認証済みの正規業務経路を含め、経路台帳で指定漏れと誤遮断を確認する。
 
 ## 動作確認
@@ -19,7 +19,8 @@ curl.exe -i -c runtime/cookies.txt http://127.0.0.1:4319/.env
 
 ```powershell
 py -3 -m sac_defense kill --kill-switch runtime/KILL on
-py -3 -m sac_defense summary --database runtime/state.db --key-file runtime/deployment.key
+py -3 -m sac_defense summary --database runtime/router.db --key-file runtime/deployment.key
+py -3 -m sac_defense summary --database runtime/decoy.db --key-file runtime/deployment.key
 py -3 -m sac_defense kill --kill-switch runtime/KILL off
 ```
 
@@ -44,15 +45,15 @@ docker compose config
 相関済みの信頼された sensor 出力のみ JSON file で投入する。形式は `{"session_cookie":"d.<sid>.<signature>","kind":"network_probe","severity":8}`。`kind` は `decoy_file_access`、`suspicious_process`、`network_probe` のいずれか。cookie は telemetry に保存せず、検証後に session ID と信号種別のみ保存する。
 
 ```powershell
-py -3 -m sac_defense host-event --database runtime/state.db --key-file runtime/deployment.key --file runtime/host-event.json
+py -3 -m sac_defense host-event --database runtime/router.db --key-file runtime/deployment.key --file runtime/host-event.json
 ```
 
 Tetragon/eBPF の生イベントには HTTP session ID が自動的に付かない。導入先の信頼された相関器で対応付け、誤相関試験をしてから使う。
 
 ## 実顧客との衝突確認
 
-導入先の顧客 registry をローカル CSV（`email`、`phone`、または `name` と `address` の組）として一時的に用意する。デコイ側へ mount せず、運用者端末で `py -3 -m sac_defense collision-check --database runtime/state.db --key-file runtime/deployment.key --registry <registry.csv>` を実行する。実顧客行は保存・出力せず、照合件数、衝突件数、照合不能件数だけを表示する。衝突と照合不能がともに 0 件であることを確認したら一時 CSV を社内ルールに沿って除去する。
+導入先の顧客 registry をローカル CSV（`email`、`phone`、または `name` と `address` の組）として一時的に用意する。デコイ側へ mount せず、運用者端末で `py -3 -m sac_defense collision-check --database runtime/decoy.db --key-file runtime/deployment.key --registry <registry.csv>` を実行する。実顧客行は保存・出力せず、照合件数、衝突件数、照合不能件数だけを表示する。衝突と照合不能がともに 0 件であることを確認したら一時 CSV を社内ルールに沿って除去する。
 
 ## 保持・復旧
 
-SQLite DB と key はアクセス制限を設けて保管する。標準の保存項目は session ID、状態、route、イベント種別、正規化 path の HMAC 短縮値、件数。本文、認証情報、IP、header は記録しない。イベントは最大 10,000 件、DB 接続のページ上限は 16,384 に設定する。lab の保持期限は案件ごとに設定し、`py -3 -m sac_defense prune --database runtime/state.db --key-file runtime/deployment.key --days 30` を定期実行する。Compose では router/decoy の両 DB を別々に prune し、それぞれの削除件数を保存する。案件終了後は停止して DB と key を削除する。復旧は同じ key と各 DB を組として戻し、seed ID と dataset version を確認する。
+SQLite DB と key はアクセス制限を設けて保管する。標準の保存項目は session ID、状態、route、イベント種別、正規化 path の HMAC 短縮値、件数。本文、認証情報、IP、header は記録しない。イベントは最大 10,000 件、DB 接続のページ上限は 16,384 に設定する。lab の保持期限は案件ごとに設定し、`py -3 -m sac_defense prune --database runtime/router.db --key-file runtime/deployment.key --days 30` と `py -3 -m sac_defense prune --database runtime/decoy.db --key-file runtime/deployment.key --days 30` を定期実行し、それぞれの削除件数を保存する。案件終了後は停止して両 DB と key を削除する。復旧は同じ key と各 DB を組として戻し、seed ID と dataset version を確認する。
