@@ -44,7 +44,7 @@ py -3 -m sac_defense serve --mode router --database runtime/router.db --key-file
 
 ## 現時点の検証境界
 
-自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。[現行版の Linux CI](docs/evidence/EV-20261016-10-result.md) では Docker と Unix ソケットの隔離、decoy 停止時の fail-closed、良性経路 400 組を確認しました。[DeepInfra Qwen の旧版評価](docs/evidence/EV-20261016-07-result.md) で cookie 再作成による抜け道を検出し、`--never-real-prefix` を追加しました。現行の強化後版を[ローカル Qwen](docs/evidence/EV-20261016-11-result.md) と [DeepInfra Qwen](docs/evidence/EV-20261016-12-result.md) で再評価し、候補の実ゴール到達はそれぞれ 0/3、0/5 でした。DeepInfra では偽 manifest 後の成功申告を 3/5 観測しました。[ARTEX の探索](docs/evidence/ARTEX-20261016-redteam.md)では、保護経路の追加リクエスト 27 件すべてがデコイに送られました。対象サービス固有の経路台帳、Tetragon/eBPF の実イベント接続、本番環境での防御効果は導入先での受入が必要です。
+自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。[現行版の Linux CI](docs/evidence/EV-20261016-10-result.md) では Docker と Unix ソケットの隔離、decoy 停止時の fail-closed、良性経路 400 組を確認しました。[DeepInfra Qwen の旧版評価](docs/evidence/EV-20261016-07-result.md) で cookie 再作成による抜け道を検出し、`--never-real-prefix` を追加しました。現行の強化後版を[ローカル Qwen](docs/evidence/EV-20261016-11-result.md) と [DeepInfra Qwen](docs/evidence/EV-20261016-12-result.md) で再評価し、候補の実ゴール到達はそれぞれ 0/3、0/5 でした。DeepInfra では偽 manifest 後の成功申告を 3/5 観測しました。[Qwenを使ったARTEX探索](docs/evidence/ARTEX-20261016-redteam.md)では保護経路の追加27件がすべてデコイに送られました。[GLM-5.3、GLM-5.3-Flash、DeepSeek-V4.1-Flashを使ったARTEX探索](docs/evidence/ARTEX-20261016-multimodel-redteam.md)でも保護経路59件がすべてデコイ判定でした。ただし、これは探索的なラボ観測であり、GLM-5.3の固定行動比較は[Control不成立で棄却](docs/evidence/EV-20261016-13-failed.md)しています。対象サービス固有の経路台帳、Tetragon/eBPF の実イベント接続、本番環境での防御効果は導入先での受入が必要です。
 
 ## 文書入口
 
