@@ -1,8 +1,8 @@
-# MIT 公開準備
+# MIT 公開記録
 
-現在の GitHub repository は **private**。MIT ライセンスは [LICENSE](../LICENSE) に明記し、Python 配布名は `sac-defense`、import 名は `sac_defense` とする。S.A.C. は **Synthetic Adversary Containment** の略称。
+MIT ライセンスは [LICENSE](../LICENSE) に明記し、Python 配布名は `sac-defense`、import 名は `sac_defense` とする。S.A.C. は **Synthetic Adversary Containment** の略称。GitHub の可視性は repository 設定を正本とする。
 
-## 公開前の確認
+## 公開時の確認
 
 | 項目 | 判定 |
 |---|---|
@@ -10,10 +10,10 @@
 | real upstream の明示的許可経路、decoy 優先、異常時 fail-closed | 自動試験で確認。導入先の経路台帳は別途必要 |
 | decoy への資格情報・本文の遮断 | 自動試験で確認。実配置の reverse proxy も確認する |
 | Docker build context から runtime/key/DB を除外 | `.dockerignore` の whitelist と [Linux CI](evidence/EV-20261016-09-result.md) の image build・mount 検査で確認 |
-| 追跡ファイルと Git 履歴の secret 混入 | 追跡中の `.env`/key/DB は 0 件、履歴の代表的な secret 形式は 0 件。公開直前に専門 scanner で再検査し、結果を受入記録へ残す |
+| 追跡ファイルと Git 履歴の secret 混入 | 追跡中の `.env`/key/DB は 0 件。公開直前に Gitleaks 8.30.1 で Git 履歴24コミットを走査し、検出0件。detect-secrets 1.5.43 の92候補は評価ハッシュ・コミットIDとテスト用 `test-key` に対応した。scanner の非検出は秘密情報の不存在を保証しない |
 | 新 Compose 構成の network/volume 分離 | [Linux CI](evidence/EV-20261016-10-result.md) で router 経由の迂回を含めて確認。導入先でも `docker inspect` を実施 |
 | 強化後の良性 p95、誤誘導 | [Linux CI](evidence/EV-20261016-09-result.md) で暫定ゲート合格 |
 | 強化後の agent 評価 | [ローカル Qwen EV11](evidence/EV-20261016-11-result.md) と [DeepInfra EV12](evidence/EV-20261016-12-result.md) を実施。候補の実到達は 0/3、0/5。[GLM-5.3 EV13](evidence/EV-20261016-13-failed.md) はControl不成立で棄却。[GLM/DeepSeekのARTEX探索](evidence/ARTEX-20261016-multimodel-redteam.md)で保護経路59件がデコイ判定。限定ラボの探索的観測として扱う |
-| 名称と公開導線 | `S.A.C.` の表記、リポジトリ名、配布名、第三者との識別を公開前に最終確認 |
+| 名称と公開導線 | `S.A.C.` の表記、GitHub `sac-defense`、Python 配布名 `sac-defense`、MIT 本文を照合済み。第三者の名称・商標について独立した法的確認は行っていない |
 
 実サービスへの適用には、許可経路と機密経路の台帳、実アプリ側の認証、TLS 終端、保持期限、実 DB と credential の非共有を受入条件として固定する。公開前の試験だけで本番防御効果を断定しない。
