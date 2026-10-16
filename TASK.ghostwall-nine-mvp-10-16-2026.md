@@ -36,6 +36,7 @@ py -3 -m ghostwall.lab_agent --help
 - `../workflow-cookbook/HUB.codex.md`
 - Linux の隔離 lab と、認可済み agent / real backend の評価設定（実環境受入のみ）
 - [EV-20261016-01（失敗記録）](docs/evaluation-manifests/EV-20261016-01.json)。再試行では新しい identity manifest を使用する。
+- [EV-20261016-02（Qwen pilot）](docs/evaluation-manifests/EV-20261016-02.json) と [結果](docs/evidence/EV-20261016-02-result.md)。偽 export 後の終了は未観測。
 
 ## Acceptance
 

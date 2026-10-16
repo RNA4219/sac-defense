@@ -22,7 +22,7 @@ last_reviewed_at: 2026-10-16
 | TC-I | kill switch / decoy 停止 | suspicious flow が 403/503、real へ流れない | `test_kill_and_decoy_failure_never_fall_through` |
 | TC-J | 同 seed の replay | 同じ合成 dataset と応答 | `test_synthetic_dataset_is_non_routable_and_reproducible`。session 全 trajectory 比較は未実施 |
 | TC-K | 内部顧客 registry との照合 | 一致 0 件 | 導入先で実施 |
-| TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | bounded scripted fixture は通過。最初の Qwen pilot はモデル出力形式で失敗し、効果の測定値なし |
+| TC-L | controlled agent で end-to-end | false-success、終了、real 保護を直接集計 | Qwen pilot [EV-20261016-02](docs/evidence/EV-20261016-02-result.md) で偽成功と実ゴールを計測。偽 export 後の成功と終了は未観測 |
 
 ## 暫定ゲート
 

@@ -39,7 +39,7 @@ py -3 -m ghostwall serve --mode router --database runtime/state.db --key-file ru
 
 ## 現時点の検証境界
 
-自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。Linux の Docker 分離と decoy 停止時の fail-closed は GitHub CI でも確認しています。Tetragon/eBPF の実イベント接続、認可済み攻撃エージェントに対する偽成功率・探索終了率は、対象環境での受入が必要です。scripted fixture の成功を実モデルの効果測定として扱いません。
+自動試験では経路、決定性、参照整合性、偽 export、fail-closed、kill switch、host signal の取り込みを確認しています。Linux の Docker 分離と decoy 停止時の fail-closed は GitHub CI でも確認しています。[Qwen3.5 4B の限定 pilot](docs/evidence/EV-20261016-02-result.md) では偽成功申告と実ゴールを計測しましたが、偽 export 後の探索終了は未観測です。Tetragon/eBPF の実イベント接続と本番環境での防御効果は、対象環境での受入が必要です。
 
 ## 文書入口
 
